@@ -66,7 +66,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .chooseAFolder: "Choose a folder"
             case .repositories: "Repositories"
             case .downloaded: "Downloaded"
-            case .skipped: "Skipped"
+            case .replaced: "Replaced"
             case .failed: "Failed"
             case .withDownloads: "With Downloads"
             case .totalDownloads: "Total Downloads"
@@ -101,7 +101,9 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .errorUnsuccessfulResponse: "GitHub returned an unsuccessful response."
             case .errorGitCloneFailed: "The repository could not be cloned as a Git repository."
             case .errorGitCloneFailedWithDetails: "The repository could not be cloned as a Git repository: %@"
-            case .errorExistingDestinationFolder: "A destination folder already exists for %@."
+            case .errorRepositoryInstallFailed: "The refreshed repository could not be installed: %@"
+            case .errorRepositoryInstallFailedRestoreUnavailable: "The refreshed repository could not be installed: %@ The previous copy could not be restored automatically."
+            case .errorRepositoryInstallFailedWithRestoreFailure: "The refreshed repository could not be installed: %@ The previous copy also could not be restored: %@"
             case .errorExistingDestinationItem: "A non-folder item already exists at the destination path for %@."
             case .errorEmptyUsernameForKeychain: "Enter a GitHub username before saving a token to the Keychain."
             case .errorEmptyTokenForKeychain: "Enter a GitHub token before saving it to the Keychain."
@@ -113,11 +115,11 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .logNoRepositoriesFound: "No repositories were found for this account."
             case .logDownloadingRepository: "… Downloading %@"
             case .logDownloadedRepository: "✓ Downloaded %@"
-            case .logSkippedRepository: "↷ Skipped %@: destination folder already exists"
+            case .logReplacedRepository: "↻ Replaced %@"
             case .logFailedRepository: "✗ Failed %@: %@"
             case .logRepositoriesFound: "Repositories found: %d"
             case .logDownloadedCount: "Downloaded: %d"
-            case .logSkippedCount: "Skipped: %d"
+            case .logReplacedCount: "Replaced: %d"
             case .logFailedCount: "Failed: %d"
             case .logRepositoriesAnalyzed: "Repositories analyzed: %d"
             case .logRepositoriesWithDownloads: "Repositories with recorded downloads: %d"
@@ -159,7 +161,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .chooseAFolder: "Elige una carpeta"
             case .repositories: "Repositorios"
             case .downloaded: "Descargados"
-            case .skipped: "Omitidos"
+            case .replaced: "Reemplazados"
             case .failed: "Fallidos"
             case .withDownloads: "Con descargas"
             case .totalDownloads: "Descargas totales"
@@ -194,7 +196,9 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .errorUnsuccessfulResponse: "GitHub devolvió una respuesta fallida."
             case .errorGitCloneFailed: "No se pudo clonar el repositorio como un repositorio Git."
             case .errorGitCloneFailedWithDetails: "No se pudo clonar el repositorio como un repositorio Git: %@"
-            case .errorExistingDestinationFolder: "Ya existe una carpeta de destino para %@."
+            case .errorRepositoryInstallFailed: "No se pudo instalar el repositorio actualizado: %@"
+            case .errorRepositoryInstallFailedRestoreUnavailable: "No se pudo instalar el repositorio actualizado: %@ No se pudo restaurar automáticamente la copia anterior."
+            case .errorRepositoryInstallFailedWithRestoreFailure: "No se pudo instalar el repositorio actualizado: %@ Tampoco se pudo restaurar la copia anterior: %@"
             case .errorExistingDestinationItem: "Ya existe un elemento que no es carpeta en la ruta de destino para %@."
             case .errorEmptyUsernameForKeychain: "Ingresa un usuario de GitHub antes de guardar un token en el llavero."
             case .errorEmptyTokenForKeychain: "Ingresa un token de GitHub antes de guardarlo en el llavero."
@@ -206,11 +210,11 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .logNoRepositoriesFound: "No se encontraron repositorios para esta cuenta."
             case .logDownloadingRepository: "… Descargando %@"
             case .logDownloadedRepository: "✓ Descargado %@"
-            case .logSkippedRepository: "↷ Omitido %@: la carpeta de destino ya existe"
+            case .logReplacedRepository: "↻ Reemplazado %@"
             case .logFailedRepository: "✗ Falló %@: %@"
             case .logRepositoriesFound: "Repositorios encontrados: %d"
             case .logDownloadedCount: "Descargados: %d"
-            case .logSkippedCount: "Omitidos: %d"
+            case .logReplacedCount: "Reemplazados: %d"
             case .logFailedCount: "Fallidos: %d"
             case .logRepositoriesAnalyzed: "Repositorios analizados: %d"
             case .logRepositoriesWithDownloads: "Repositorios con descargas registradas: %d"
@@ -271,7 +275,7 @@ enum L10nKey {
     case chooseAFolder
     case repositories
     case downloaded
-    case skipped
+    case replaced
     case failed
     case withDownloads
     case totalDownloads
@@ -306,7 +310,9 @@ enum L10nKey {
     case errorUnsuccessfulResponse
     case errorGitCloneFailed
     case errorGitCloneFailedWithDetails
-    case errorExistingDestinationFolder
+    case errorRepositoryInstallFailed
+    case errorRepositoryInstallFailedRestoreUnavailable
+    case errorRepositoryInstallFailedWithRestoreFailure
     case errorExistingDestinationItem
     case errorEmptyUsernameForKeychain
     case errorEmptyTokenForKeychain
@@ -318,11 +324,11 @@ enum L10nKey {
     case logNoRepositoriesFound
     case logDownloadingRepository
     case logDownloadedRepository
-    case logSkippedRepository
+    case logReplacedRepository
     case logFailedRepository
     case logRepositoriesFound
     case logDownloadedCount
-    case logSkippedCount
+    case logReplacedCount
     case logFailedCount
     case logRepositoriesAnalyzed
     case logRepositoriesWithDownloads

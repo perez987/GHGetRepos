@@ -68,7 +68,9 @@ enum GitHubAPIError: LocalizedError {
     case invalidResponse
     case server(statusCode: Int, message: String, fallback: ServerMessageFallback?)
     case gitCloneFailed(String?)
-    case existingDestinationFolder(String)
+    case repositoryInstallFailed(String)
+    case repositoryInstallFailedRestoreUnavailable(String)
+    case repositoryInstallFailedWithRestoreFailure(installDetails: String, restoreDetails: String)
     case existingDestinationItem(String)
 
     var errorDescription: String? {
@@ -102,8 +104,16 @@ enum GitHubAPIError: LocalizedError {
                 return language.text(.errorGitCloneFailed)
             }
             return language.formatted(.errorGitCloneFailedWithDetails, trimmedDetails)
-        case let .existingDestinationFolder(name):
-            return language.formatted(.errorExistingDestinationFolder, name)
+        case let .repositoryInstallFailed(details):
+            return language.formatted(.errorRepositoryInstallFailed, details.trimmingCharacters(in: .whitespacesAndNewlines))
+        case let .repositoryInstallFailedRestoreUnavailable(details):
+            return language.formatted(.errorRepositoryInstallFailedRestoreUnavailable, details.trimmingCharacters(in: .whitespacesAndNewlines))
+        case let .repositoryInstallFailedWithRestoreFailure(installDetails, restoreDetails):
+            return language.formatted(
+                .errorRepositoryInstallFailedWithRestoreFailure,
+                installDetails.trimmingCharacters(in: .whitespacesAndNewlines),
+                restoreDetails.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
         case let .existingDestinationItem(name):
             return language.formatted(.errorExistingDestinationItem, name)
         }

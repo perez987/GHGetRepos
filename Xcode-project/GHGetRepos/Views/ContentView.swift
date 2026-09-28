@@ -281,7 +281,7 @@ struct RepositoryDownloadsView: View {
         [
             Metric(id: "repositories", title: settings.text(.repositories), value: summaryValue { String($0.repositoryCount) }, symbol: "shippingbox.fill"),
             Metric(id: "downloaded", title: settings.text(.downloaded), value: summaryValue { String($0.downloadedCount) }, symbol: "arrow.down.circle.fill"),
-            Metric(id: "skipped", title: settings.text(.skipped), value: summaryValue { String($0.skippedCount) }, symbol: "forward.circle.fill"),
+            Metric(id: "replaced", title: settings.text(.replaced), value: summaryValue { String($0.replacedCount) }, symbol: "arrow.triangle.2.circlepath.circle.fill"),
             Metric(id: "failed", title: settings.text(.failed), value: summaryValue { String($0.failedCount) }, symbol: "exclamationmark.triangle.fill"),
         ]
     }

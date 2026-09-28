@@ -77,7 +77,7 @@ final class ProcessContinuationCoordinator: @unchecked Sendable {
 struct RepositoryDownloadSummary {
     let repositoryCount: Int
     let downloadedCount: Int
-    let skippedCount: Int
+    let replacedCount: Int
     let failedCount: Int
 }
 
@@ -390,34 +390,34 @@ struct RepositoryDownloadRunner {
 
         if allRepositories.isEmpty {
             await emit(language.text(.logNoRepositoriesFound))
-            return RepositoryDownloadSummary(repositoryCount: 0, downloadedCount: 0, skippedCount: 0, failedCount: 0)
+            return RepositoryDownloadSummary(repositoryCount: 0, downloadedCount: 0, replacedCount: 0, failedCount: 0)
         }
 
         var downloadedCount = 0
-        var skippedCount = 0
+        var replacedCount = 0
         var failedCount = 0
 
         for repository in allRepositories {
             try Task.checkCancellation()
             do {
                 await emit(downloadingLogLine(for: repository.name))
-                try await download(
+                let result = try await download(
                     repository: repository,
                     destinationDirectory: destinationDirectory,
                     username: trimmedUsername,
                     token: trimmedToken
                 )
-                downloadedCount += 1
-                await emit(downloadedLogLine(for: repository.name))
-            } catch let error as GitHubAPIError {
-                switch error {
-                case .existingDestinationFolder:
-                    skippedCount += 1
-                    await emit(skippedLogLine(for: repository.name))
-                default:
-                    failedCount += 1
-                    await emit(failedLogLine(for: repository.name, error: error))
+                switch result {
+                case .downloaded:
+                    downloadedCount += 1
+                    await emit(downloadedLogLine(for: repository.name))
+                case .replaced:
+                    replacedCount += 1
+                    await emit(replacedLogLine(for: repository.name))
                 }
+            } catch let error as GitHubAPIError {
+                failedCount += 1
+                await emit(failedLogLine(for: repository.name, error: error))
             } catch {
                 if isCancellationError(error) {
                     throw error
@@ -430,7 +430,7 @@ struct RepositoryDownloadRunner {
         for line in summaryLogLines(
             repositoryCount: allRepositories.count,
             downloadedCount: downloadedCount,
-            skippedCount: skippedCount,
+            replacedCount: replacedCount,
             failedCount: failedCount
         ) {
             await emit(line)
@@ -439,26 +439,33 @@ struct RepositoryDownloadRunner {
         return RepositoryDownloadSummary(
             repositoryCount: allRepositories.count,
             downloadedCount: downloadedCount,
-            skippedCount: skippedCount,
+            replacedCount: replacedCount,
             failedCount: failedCount
         )
     }
 
-    private func download(repository: GitHubRepository, destinationDirectory: URL, username: String, token: String) async throws {
+    private enum RepositoryDownloadResult {
+        case downloaded
+        case replaced
+    }
+
+    private func download(repository: GitHubRepository, destinationDirectory: URL, username: String, token: String) async throws -> RepositoryDownloadResult {
         let repositoryFolderURL = destinationDirectory.appendingPathComponent(destinationFolderName(for: repository), isDirectory: true)
+        let stagingFolderURL = makeStagingFolderURL(for: repositoryFolderURL)
         var isDirectory: ObjCBool = false
         if FileManager.default.fileExists(atPath: repositoryFolderURL.path, isDirectory: &isDirectory) {
-            if isDirectory.boolValue {
-                throw GitHubAPIError.existingDestinationFolder(repository.name)
+            guard isDirectory.boolValue else {
+                throw GitHubAPIError.existingDestinationItem(repository.name)
             }
-            throw GitHubAPIError.existingDestinationItem(repository.name)
         }
 
         do {
-            try await cloneRepository(repository, to: repositoryFolderURL, username: username, token: token)
+            try await cloneRepository(repository, to: stagingFolderURL, username: username, token: token)
+            try Task.checkCancellation()
+            return try installClonedRepository(at: stagingFolderURL, to: repositoryFolderURL, repositoryName: repository.name)
         } catch {
-            if FileManager.default.fileExists(atPath: repositoryFolderURL.path) {
-                try? FileManager.default.removeItem(at: repositoryFolderURL)
+            if FileManager.default.fileExists(atPath: stagingFolderURL.path) {
+                try? FileManager.default.removeItem(at: stagingFolderURL)
             }
             throw error
         }
@@ -565,26 +572,100 @@ struct RepositoryDownloadRunner {
         language.formatted(.logDownloadedRepository, repositoryName)
     }
 
-    func downloadingLogLine(for repositoryName: String) -> String {
-        language.formatted(.logDownloadingRepository, repositoryName)
+    func replacedLogLine(for repositoryName: String) -> String {
+        language.formatted(.logReplacedRepository, repositoryName)
     }
 
-    func skippedLogLine(for repositoryName: String) -> String {
-        language.formatted(.logSkippedRepository, repositoryName)
+    func downloadingLogLine(for repositoryName: String) -> String {
+        language.formatted(.logDownloadingRepository, repositoryName)
     }
 
     func failedLogLine(for repositoryName: String, error: Error) -> String {
         language.formatted(.logFailedRepository, repositoryName, language.errorMessage(for: error))
     }
 
-    func summaryLogLines(repositoryCount: Int, downloadedCount: Int, skippedCount: Int, failedCount: Int) -> [String] {
+    func summaryLogLines(repositoryCount: Int, downloadedCount: Int, replacedCount: Int, failedCount: Int) -> [String] {
         [
             "",
             language.formatted(.logRepositoriesFound, repositoryCount),
             language.formatted(.logDownloadedCount, downloadedCount),
-            language.formatted(.logSkippedCount, skippedCount),
+            language.formatted(.logReplacedCount, replacedCount),
             language.formatted(.logFailedCount, failedCount),
         ]
+    }
+
+    private func makeStagingFolderURL(for destinationURL: URL) -> URL {
+        destinationURL.deletingLastPathComponent().appendingPathComponent(".\(destinationURL.lastPathComponent).\(UUID().uuidString)", isDirectory: true)
+    }
+
+    private func installClonedRepository(at stagingFolderURL: URL, to destinationURL: URL, repositoryName: String) throws -> RepositoryDownloadResult {
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+        if fileManager.fileExists(atPath: destinationURL.path, isDirectory: &isDirectory) {
+            guard isDirectory.boolValue else {
+                throw GitHubAPIError.existingDestinationItem(repositoryName)
+            }
+
+            let backupFolderURL = makeStagingFolderURL(for: destinationURL)
+            try fileManager.moveItem(at: destinationURL, to: backupFolderURL)
+            var shouldCleanBackupFolder = true
+            defer {
+                if shouldCleanBackupFolder, fileManager.fileExists(atPath: backupFolderURL.path) {
+                    try? fileManager.removeItem(at: backupFolderURL)
+                }
+            }
+            do {
+                try Task.checkCancellation()
+                try fileManager.moveItem(at: stagingFolderURL, to: destinationURL)
+            } catch {
+                let installationError = error
+                if fileManager.fileExists(atPath: destinationURL.path) {
+                    try? fileManager.removeItem(at: destinationURL)
+                }
+                if fileManager.fileExists(atPath: backupFolderURL.path) {
+                    do {
+                        try fileManager.moveItem(at: backupFolderURL, to: destinationURL)
+                        shouldCleanBackupFolder = false
+                    } catch let restoreError {
+                        throw GitHubAPIError.repositoryInstallFailedWithRestoreFailure(
+                            installDetails: installationError.localizedDescription,
+                            restoreDetails: restoreError.localizedDescription
+                        )
+                    }
+                    if isCancellationError(installationError) {
+                        if fileManager.fileExists(atPath: stagingFolderURL.path) {
+                            try? fileManager.removeItem(at: stagingFolderURL)
+                        }
+                        throw installationError
+                    }
+                    throw GitHubAPIError.repositoryInstallFailed(installationError.localizedDescription)
+                } else {
+                    if isCancellationError(installationError) {
+                        if fileManager.fileExists(atPath: stagingFolderURL.path) {
+                            try? fileManager.removeItem(at: stagingFolderURL)
+                        }
+                        throw installationError
+                    }
+                    throw GitHubAPIError.repositoryInstallFailedRestoreUnavailable(
+                        installationError.localizedDescription
+                    )
+                }
+            }
+            return .replaced
+        }
+
+        do {
+            try fileManager.moveItem(at: stagingFolderURL, to: destinationURL)
+        } catch {
+            if isCancellationError(error) {
+                if fileManager.fileExists(atPath: stagingFolderURL.path) {
+                    try? fileManager.removeItem(at: stagingFolderURL)
+                }
+                throw error
+            }
+            throw GitHubAPIError.repositoryInstallFailed(error.localizedDescription)
+        }
+        return .downloaded
     }
 
     private func makeGitAskPassFiles(token: String) throws -> GitAskPassFiles {
