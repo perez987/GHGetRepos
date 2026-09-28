@@ -6,7 +6,7 @@ import AppKit
 #endif
 
 @MainActor
-final class AppViewModel: ObservableObject {
+class BaseRunViewModel<Summary>: ObservableObject {
     enum RunState {
         case idle
         case running
@@ -32,7 +32,7 @@ final class AppViewModel: ObservableObject {
 
     @Published private(set) var outputLines: [String] = []
     @Published private(set) var runState: RunState = .idle
-    @Published private(set) var lastSummary: RepositoryDownloadSummary?
+    @Published private(set) var lastSummary: Summary?
 
     private var currentTask: Task<Void, Never>?
     private var currentRunID = UUID()
@@ -41,38 +41,36 @@ final class AppViewModel: ObservableObject {
         currentTask != nil
     }
 
-    func run(username: String, token: String?, destinationDirectory: URL?, language: AppLanguage) {
+    func startRun(
+        language: AppLanguage,
+        operation: @escaping @Sendable (@escaping @Sendable (String) async -> Void) async throws -> Summary
+    ) {
         let runID = UUID()
         let previousTask = currentTask
+        previousTask?.cancel()
+        currentTask = nil
         currentRunID = runID
 
-        let task = Task.detached { [weak self] in
+        let task = Task { [weak self] in
             guard let self else {
                 return
             }
 
-            previousTask?.cancel()
             await previousTask?.value
 
-            guard await self.isCurrentRun(runID) else {
+            guard self.isCurrentRun(runID) else {
                 return
             }
 
-            await self.prepareForRun(runID)
+            self.prepareForRun(runID)
 
             do {
-                let summary = try await RepositoryDownloadRunner(
-                    username: username,
-                    token: token,
-                    destinationDirectory: destinationDirectory,
-                    language: language
-                ).run { [weak self] line in
+                let summary = try await operation { [weak self] line in
                     await self?.appendLine(line, for: runID)
                 }
-
-                await self.finishRun(summary: summary, runID: runID)
+                self.finishRun(summary: summary, runID: runID)
             } catch {
-                await self.finishRun(error: error, language: language, runID: runID)
+                self.finishRun(error: error, language: language, runID: runID)
             }
         }
 
@@ -113,7 +111,7 @@ final class AppViewModel: ObservableObject {
         runState = .running
     }
 
-    private func finishRun(summary: RepositoryDownloadSummary, runID: UUID) {
+    private func finishRun(summary: Summary, runID: UUID) {
         guard isCurrentRun(runID) else {
             return
         }
@@ -157,5 +155,32 @@ final class AppViewModel: ObservableObject {
 
         let nsError = error as NSError
         return nsError.domain == NSURLErrorDomain && nsError.code == URLError.cancelled.rawValue
+    }
+}
+
+@MainActor
+final class AppViewModel: BaseRunViewModel<RepositoryDownloadSummary> {
+    func run(username: String, token: String?, destinationDirectory: URL?, language: AppLanguage) {
+        startRun(language: language) { emit in
+            try await RepositoryDownloadRunner(
+                username: username,
+                token: token,
+                destinationDirectory: destinationDirectory,
+                language: language
+            ).run(emit: emit)
+        }
+    }
+}
+
+@MainActor
+final class TotalDownloadsViewModel: BaseRunViewModel<DownloadsReportSummary> {
+    func run(username: String, token: String?, language: AppLanguage) {
+        startRun(language: language) { emit in
+            try await DownloadsReportRunner(
+                username: username,
+                token: token,
+                language: language
+            ).run(emit: emit)
+        }
     }
 }

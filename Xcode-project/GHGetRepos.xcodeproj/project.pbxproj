@@ -32,7 +32,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A12 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1A1A1A1A1A1A1A1A1A1A1A14 /* OutputLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputLogView.swift; sourceTree = "<group>"; };
 		1A1A1A1A1A1A1A1A1A1A1A16 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		1A1A1A1A1A1A1A1A1A1A1A17 /* GHGetRepos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GHGetRepos.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A1A1A1A1A1A1A1A1A1A1A17 /* GH Get Repos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "GH Get Repos.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B0000010000000000000005 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
@@ -80,7 +80,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A1C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1A1A1A1A1A1A1A1A1A1A1A17 /* GHGetRepos.app */,
+				1A1A1A1A1A1A1A1A1A1A1A17 /* GH Get Repos.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -110,9 +110,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1A1A1A1A1A1A1A1A1A1A1A1F /* GHGetRepos */ = {
+		1A1A1A1A1A1A1A1A1A1A1A1F /* GH Get Repos */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1A1A1A1A1A1A1A1A1A1A1A20 /* Build configuration list for PBXNativeTarget "GHGetRepos" */;
+			buildConfigurationList = 1A1A1A1A1A1A1A1A1A1A1A20 /* Build configuration list for PBXNativeTarget "GH Get Repos" */;
 			buildPhases = (
 				1A1A1A1A1A1A1A1A1A1A1A21 /* Sources */,
 				1A1A1A1A1A1A1A1A1A1A1A18 /* Frameworks */,
@@ -122,9 +122,9 @@
 			);
 			dependencies = (
 			);
-			name = GHGetRepos;
+			name = "GH Get Repos";
 			productName = GHGetRepos;
-			productReference = 1A1A1A1A1A1A1A1A1A1A1A17 /* GHGetRepos.app */;
+			productReference = 1A1A1A1A1A1A1A1A1A1A1A17 /* GH Get Repos.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -148,7 +148,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				1A1A1A1A1A1A1A1A1A1A1A1F /* GHGetRepos */,
+				1A1A1A1A1A1A1A1A1A1A1A1F /* GH Get Repos */,
 			);
 		};
 /* End PBXProject section */
@@ -322,7 +322,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = perez987.GHGetRepos;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -352,7 +352,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = perez987.GHGetRepos;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -365,7 +365,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		1A1A1A1A1A1A1A1A1A1A1A20 /* Build configuration list for PBXNativeTarget "GHGetRepos" */ = {
+		1A1A1A1A1A1A1A1A1A1A1A20 /* Build configuration list for PBXNativeTarget "GH Get Repos" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1A1A1A1A1A1A1A1A1A1A1A27 /* Debug */,

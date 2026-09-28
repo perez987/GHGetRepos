@@ -1,6 +1,40 @@
 import SwiftUI
 
+private let heroDetailChipWidth: CGFloat = 275
+
 struct ContentView: View {
+    @EnvironmentObject private var settings: SettingsStore
+
+    var body: some View {
+        TabView {
+            RepositoryDownloadsView()
+                .tabItem {
+                    Label(settings.text(.repositoriesTab), systemImage: "square.and.arrow.down.fill")
+                }
+            TotalDownloadsView()
+                .tabItem {
+                    Label(settings.text(.totalDownloadsTab), systemImage: "chart.bar.fill")
+                }
+        }
+        .padding(.top, 6)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                SettingsLink {
+                    Label(settings.text(.settings), systemImage: "gearshape")
+                }
+            }
+        }
+    }
+}
+
+struct RepositoryDownloadsView: View {
+    private struct Metric: Identifiable {
+        let id: String
+        let title: String
+        let value: String
+        let symbol: String
+    }
+
     @EnvironmentObject private var settings: SettingsStore
     @StateObject private var viewModel = AppViewModel()
 
@@ -66,11 +100,26 @@ struct ContentView: View {
     }
 
     private var metricsRow: some View {
-        HStack(spacing: 16) {
-            summaryCard(title: settings.text(.repositories), value: summaryValue { String($0.repositoryCount) }, symbol: "shippingbox.fill")
-            summaryCard(title: settings.text(.downloaded), value: summaryValue { String($0.downloadedCount) }, symbol: "arrow.down.circle.fill")
-            summaryCard(title: settings.text(.skipped), value: summaryValue { String($0.skippedCount) }, symbol: "forward.circle.fill")
-            summaryCard(title: settings.text(.failed), value: summaryValue { String($0.failedCount) }, symbol: "exclamationmark.triangle.fill")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) {
+                ForEach(repositoryMetrics) { metric in
+                    summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                }
+            }
+
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    ForEach(Array(repositoryMetrics.prefix(2))) { metric in
+                        summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                    }
+                }
+
+                HStack(spacing: 16) {
+                    ForEach(Array(repositoryMetrics.suffix(2))) { metric in
+                        summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                    }
+                }
+            }
         }
     }
 
@@ -130,15 +179,6 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.extraLarge)
                 .disabled(viewModel.outputLines.isEmpty)
-
-                Spacer()
-
-                SettingsLink {
-                    Label(settings.text(.settings), systemImage: "gearshape")
-                        .frame(minWidth: 120)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
             }
 
             if settings.trimmedUsername().isEmpty || settings.hasStoredToken == false || settings.destinationURL() == nil {
@@ -235,5 +275,244 @@ struct ContentView: View {
             return "—"
         }
         return transform(summary)
+    }
+
+    private var repositoryMetrics: [Metric] {
+        [
+            Metric(id: "repositories", title: settings.text(.repositories), value: summaryValue { String($0.repositoryCount) }, symbol: "shippingbox.fill"),
+            Metric(id: "downloaded", title: settings.text(.downloaded), value: summaryValue { String($0.downloadedCount) }, symbol: "arrow.down.circle.fill"),
+            Metric(id: "skipped", title: settings.text(.skipped), value: summaryValue { String($0.skippedCount) }, symbol: "forward.circle.fill"),
+            Metric(id: "failed", title: settings.text(.failed), value: summaryValue { String($0.failedCount) }, symbol: "exclamationmark.triangle.fill"),
+        ]
+    }
+}
+
+struct TotalDownloadsView: View {
+    private struct Metric: Identifiable {
+        let id: String
+        let title: String
+        let value: String
+        let symbol: String
+    }
+
+    @EnvironmentObject private var settings: SettingsStore
+    @StateObject private var viewModel = TotalDownloadsViewModel()
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.10, green: 0.14, blue: 0.26),
+                    Color(red: 0.14, green: 0.24, blue: 0.34),
+                    Color(red: 0.20, green: 0.18, blue: 0.32),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                heroCard
+                metricsRow
+                controlsRow
+                outputCard
+            }
+            .padding(24)
+        }
+    }
+
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(settings.text(.totalDownloadsAppTitle), systemImage: "chart.bar.fill")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                    Text(settings.text(.totalDownloadsAppSubtitle))
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                stateBadge
+            }
+
+            HStack(spacing: 12) {
+                detailChip(title: settings.text(.githubUser), value: settings.trimmedUsername().isEmpty ? settings.text(.notSet) : settings.trimmedUsername())
+                    .frame(maxWidth: heroDetailChipWidth, alignment: .leading)
+                detailChip(title: settings.text(.tokenLabel), value: settings.hasStoredToken ? settings.text(.tokenStored) : settings.text(.tokenOptional))
+                    .frame(maxWidth: heroDetailChipWidth, alignment: .leading)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(24)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(.white.opacity(0.15), lineWidth: 1)
+        )
+    }
+
+    private var metricsRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) {
+                ForEach(totalDownloadMetrics) { metric in
+                    summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                }
+            }
+
+            VStack(spacing: 16) {
+                ForEach(totalDownloadMetrics) { metric in
+                    summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                }
+            }
+        }
+    }
+
+    private var controlsRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Button {
+                    viewModel.run(username: settings.trimmedUsername(), token: settings.loadToken(), language: settings.language)
+                } label: {
+                    Label(settings.text(viewModel.isRunning ? .running : .runReport), systemImage: viewModel.isRunning ? "hourglass" : "play.fill")
+                        .frame(minWidth: 120)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.extraLarge)
+                .disabled(viewModel.isRunning || settings.trimmedUsername().isEmpty)
+
+                Button {
+                    viewModel.cancel()
+                } label: {
+                    Label(settings.text(.cancel), systemImage: "stop.fill")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.extraLarge)
+                .disabled(viewModel.isRunning == false)
+
+                Button {
+                    viewModel.copyOutput()
+                } label: {
+                    Label(settings.text(.copy), systemImage: "doc.on.doc")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.extraLarge)
+                .disabled(viewModel.outputLines.isEmpty)
+
+                Button {
+                    viewModel.clearOutput()
+                } label: {
+                    Label(settings.text(.clear), systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.extraLarge)
+                .disabled(viewModel.outputLines.isEmpty)
+            }
+
+            if settings.trimmedUsername().isEmpty {
+                Text(settings.text(.reportSettingsHint))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if settings.hasStoredToken == false {
+                Text(settings.text(.reportPublicOnlyHint))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var outputCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text(settings.text(.liveOutput))
+                    .font(.title3.weight(.semibold))
+                Spacer()
+                Text(settings.text(.selectableAutoScrolls))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            OutputLogView(lines: viewModel.outputLines, emptyStateText: settings.text(.reportOutputEmpty))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .padding(22)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(.white.opacity(0.10), lineWidth: 1)
+        )
+    }
+
+    private var stateBadge: some View {
+        Text(viewModel.runState.title(in: settings.language))
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(badgeBackground, in: Capsule())
+    }
+
+    private var badgeBackground: some ShapeStyle {
+        switch viewModel.runState {
+        case .idle:
+            Color.white.opacity(0.12)
+        case .running:
+            Color.blue.opacity(0.30)
+        case .succeeded:
+            Color.green.opacity(0.30)
+        case .failed:
+            Color.red.opacity(0.30)
+        case .cancelled:
+            Color.orange.opacity(0.30)
+        }
+    }
+
+    private func summaryCard(title: String, value: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: symbol)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.10), lineWidth: 1)
+        )
+    }
+
+    private func detailChip(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased(with: settings.language.locale))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.medium))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func summaryValue(_ transform: (DownloadsReportSummary) -> String) -> String {
+        guard let summary = viewModel.lastSummary else {
+            return "—"
+        }
+        return transform(summary)
+    }
+
+    private var totalDownloadMetrics: [Metric] {
+        [
+            Metric(id: "repositories", title: settings.text(.repositories), value: summaryValue { String($0.repositoryCount) }, symbol: "shippingbox.fill"),
+            Metric(id: "with-downloads", title: settings.text(.withDownloads), value: summaryValue { String($0.repositoriesWithDownloads) }, symbol: "checkmark.seal.fill"),
+            Metric(id: "total-downloads", title: settings.text(.totalDownloads), value: summaryValue { String($0.totalDownloads) }, symbol: "chart.bar.fill"),
+        ]
     }
 }

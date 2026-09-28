@@ -4,12 +4,22 @@ import Foundation
 import FoundationNetworking
 #endif
 
-struct AuthenticatedGitHubUser: Decodable {
+struct AuthenticatedGitHubUser: Decodable, Sendable {
     let login: String
 }
 
-struct GitHubRepository: Decodable {
-    struct Owner: Decodable {
+struct GitHubAccount: Decodable, Sendable {
+    enum AccountType: String, Decodable, Sendable {
+        case user = "User"
+        case organization = "Organization"
+    }
+
+    let login: String
+    let type: AccountType
+}
+
+struct GitHubRepository: Decodable, Sendable {
+    struct Owner: Decodable, Sendable {
         let login: String
     }
 
@@ -30,7 +40,19 @@ struct GitHubRepository: Decodable {
     }
 }
 
-struct GitHubAPIErrorPayload: Decodable {
+struct GitHubRelease: Decodable, Sendable {
+    let assets: [GitHubAsset]
+}
+
+struct GitHubAsset: Decodable, Sendable {
+    let downloadCount: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case downloadCount = "download_count"
+    }
+}
+
+struct GitHubAPIErrorPayload: Decodable, Sendable {
     let message: String
 }
 
@@ -89,7 +111,8 @@ enum GitHubAPIError: LocalizedError {
 }
 
 struct GitHubAPIClient {
-    let token: String
+    let username: String
+    let token: String?
 
     static let apiBaseURL = URL(string: "https://api.github.com")!
     static let repositoryHost: String = {
@@ -105,17 +128,65 @@ struct GitHubAPIClient {
     private let perPage = 100
     private let decoder = JSONDecoder()
 
+    private var trimmedToken: String? {
+        let value = token?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let value, value.isEmpty == false else {
+            return nil
+        }
+        return value
+    }
+
     func fetchAuthenticatedUser() async throws -> AuthenticatedGitHubUser {
         try await get(pathComponents: ["user"], queryItems: [])
     }
 
-    func fetchRepositories(page: Int) async throws -> [GitHubRepository] {
+    func fetchRequestedAccount() async throws -> GitHubAccount {
+        try await get(pathComponents: ["users", username], queryItems: [])
+    }
+
+    func fetchAuthenticatedRepositories(page: Int) async throws -> [GitHubRepository] {
         try await get(
             pathComponents: ["user", "repos"],
             queryItems: [
                 URLQueryItem(name: "affiliation", value: "owner"),
                 URLQueryItem(name: "sort", value: "full_name"),
                 URLQueryItem(name: "direction", value: "asc"),
+                URLQueryItem(name: "per_page", value: String(perPage)),
+                URLQueryItem(name: "page", value: String(page)),
+            ]
+        )
+    }
+
+    func fetchPublicUserRepositories(page: Int) async throws -> [GitHubRepository] {
+        try await get(
+            pathComponents: ["users", username, "repos"],
+            queryItems: [
+                URLQueryItem(name: "type", value: "owner"),
+                URLQueryItem(name: "sort", value: "full_name"),
+                URLQueryItem(name: "direction", value: "asc"),
+                URLQueryItem(name: "per_page", value: String(perPage)),
+                URLQueryItem(name: "page", value: String(page)),
+            ]
+        )
+    }
+
+    func fetchOrganizationRepositories(page: Int) async throws -> [GitHubRepository] {
+        try await get(
+            pathComponents: ["orgs", username, "repos"],
+            queryItems: [
+                URLQueryItem(name: "type", value: "all"),
+                URLQueryItem(name: "sort", value: "full_name"),
+                URLQueryItem(name: "direction", value: "asc"),
+                URLQueryItem(name: "per_page", value: String(perPage)),
+                URLQueryItem(name: "page", value: String(page)),
+            ]
+        )
+    }
+
+    func fetchReleases(ownerName: String, repositoryName: String, page: Int) async throws -> [GitHubRelease] {
+        try await get(
+            pathComponents: ["repos", ownerName, repositoryName, "releases"],
+            queryItems: [
                 URLQueryItem(name: "per_page", value: String(perPage)),
                 URLQueryItem(name: "page", value: String(page)),
             ]
@@ -142,7 +213,9 @@ struct GitHubAPIClient {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
         request.setValue("GHGetReposApp", forHTTPHeaderField: "User-Agent")
-        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        if let trimmedToken {
+            request.setValue("Bearer " + trimmedToken, forHTTPHeaderField: "Authorization")
+        }
         return request
     }
 
@@ -165,5 +238,4 @@ struct GitHubAPIClient {
             )
         }
     }
-
 }

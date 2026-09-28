@@ -1,26 +1,19 @@
-# GHGetRepos
+# GH Get Repos: fetch all GitHub repositories or know the total count of asset downloads
 
 ![Platform](https://img.shields.io/badge/macOS-14%2B-orange.svg)
 ![Swift](https://img.shields.io/badge/Swift-5-green.svg)
 ![Xcode](https://img.shields.io/badge/Xcode-16-blue.svg)
 
-GHGetRepos is a native macOS app built with SwiftUI that downloads all repositories from a GitHub account, including private repositories, into a user-selected destination folder.
+GH Get Repos is a native macOS app built with SwiftUI that:
 
-|                              |
-| :--------------------------- |
-| ![Window](Images/Window.png) |
-
-## Requirements
-
-- macOS 14 or later
-- Xcode 16 or later
-- Swift 5
+- downloads all repositories from a GitHub account, including private repositories, into a user-selected destination folder
+- counts release downloads from all repositories in a GitHub account; this is the SwiftUI evolution of a previous Bash script that performs the same task in the Terminal. This script is located in the `Bash-script` folder.
 
 ## Features
 
 - Native SwiftUI macOS interface with soft gradients and glass-style panels
-- Saved GitHub username in `UserDefaults`
-- GitHub classic private token stored securely in the macOS Keychain
+- Latest GitHub username saved locally in `UserDefaults`
+- GitHub classic private token stored securely in the macOS Keychain under the `github-repo-downloads` service
 - Destination folder picker
 - Authenticated repository listing for the configured account
 - Per-repository download into its own folder
@@ -28,20 +21,40 @@ GHGetRepos is a native macOS app built with SwiftUI that downloads all repositor
 - Language system with selector in the Settings window
 - Xcode project with hardened runtime enabled and no App Sandbox
 
+## Requirements
+
+- macOS 14 or later
+- Xcode 16 or later
+- Swift 5
+
+## Tab 1: Get Repos
+
+|                              |
+| :--------------------------- |
+| ![Window](Images/Window1.png) |
+
+## Tab 2: Total Downloads
+
+|                              |
+| :--------------------------- |
+| ![Window](Images/Window2.png) |
+
 ## Open the project
 
 Open `GHGetRepos.xcodeproj` in Xcode 16 or later and run the **GHGetRepos** scheme.
 
-## Configure the app
+## Configure credentials in the app
 
 1. Open **Settings**
-2. Enter the GitHub username for the account
-3. Paste a GitHub classic personal access token with access to the account's private repositories
-4. Save the token to the Keychain
-5. Choose the destination directory in the main window
-6. Click **Download Repositories**
+2. Enter the GitHub username to query
+3. Paste the GitHub classic token into the secure field
+4. Save the token to the Keychain.
 
-## GitHub classic personal token
+The app uses the Keychain service name `github-release-downloads`. The app does not save the token as plain text.
+
+> When the user clicks the text field for entering the classic token, a link to the Passwords app appears automatically because it is a SecureField; however, the classic token value is stored in the Keychain rather than in Passwords, making this link useless.
+
+## Authentication with a Personal Access Token Classic
 
 A Personal Access Token (classic) is used to authenticate requests to the GitHub API. For this app, which queries public and private data, you must generate a classic token with `repo` scope, as in the image:
 
@@ -49,17 +62,15 @@ A Personal Access Token (classic) is used to authenticate requests to the GitHub
 | :--------------------------------- |
 | ![Token](Images/Token-private.png) |
 
-If the token does not have a defined scope, the application can access public repositories but not private ones.
-
 ### Create the token
 
 1. On GitHub, open **Settings**
 2. Go to **Credentials**
 3. Open **Personal access tokens (classic)**
 4. Click **Generate new token** >> **Generate new token (classic)**
-5. Assign a description
+5. Assign a description, for example: `macOS get-repos`
 6. Choose an appropriate expiration (7, 30, 60, 90 days, custom, or no expiration date)
-7. For public information use, you do not need selected scope, but for private information, you do need it
+7. Select `repo` scope
 8. Click **Generate token** and copy it immediately. GitHub does not show the full value again later.
 
 ### Keys in Keychain
