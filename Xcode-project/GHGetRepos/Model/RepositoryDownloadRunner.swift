@@ -229,7 +229,8 @@ struct DownloadsReportRunner {
     ) async throws -> (Int) async throws -> [GitHubRepository] {
         if token?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
            let authenticatedUser = try? await client.fetchAuthenticatedUser(),
-           authenticatedUser.login.caseInsensitiveCompare(username) == .orderedSame {
+           authenticatedUser.login.caseInsensitiveCompare(username) == .orderedSame
+        {
             return { page in
                 try await client.fetchAuthenticatedRepositories(page: page)
             }
@@ -683,7 +684,8 @@ struct RepositoryDownloadRunner {
         let actualComponents = try normalizedCloneURLComponents(for: repository.cloneURL)
         let expectedComponents = try expectedCloneURLComponents(for: repository)
         guard actualComponents.scheme?.caseInsensitiveCompare(expectedComponents.scheme ?? "") == .orderedSame,
-              actualComponents.host?.caseInsensitiveCompare(expectedComponents.host ?? "") == .orderedSame else {
+              actualComponents.host?.caseInsensitiveCompare(expectedComponents.host ?? "") == .orderedSame
+        else {
             throw GitHubAPIError.invalidResponse
         }
         guard normalizedHTTPSPort(for: actualComponents) == normalizedHTTPSPort(for: expectedComponents) else {
@@ -711,7 +713,8 @@ struct RepositoryDownloadRunner {
               components.password == nil,
               components.percentEncodedPassword == nil,
               components.percentEncodedPath.contains(";") == false,
-              components.url != nil else {
+              components.url != nil
+        else {
             throw GitHubAPIError.invalidResponse
         }
         return components
@@ -764,7 +767,8 @@ struct RepositoryDownloadRunner {
         let fileSize = (try? handle.seekToEnd()) ?? 0
         let startingOffset = fileSize > UInt64(maxByteCount) ? fileSize - UInt64(maxByteCount) : 0
         guard (try? handle.seek(toOffset: startingOffset)) != nil,
-              let data = try? handle.readToEnd() else {
+              let data = try? handle.readToEnd()
+        else {
             return nil
         }
         return data.count > maxByteCount ? Data(data.suffix(maxByteCount)) : data

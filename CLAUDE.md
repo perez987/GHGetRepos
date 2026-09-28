@@ -1,34 +1,37 @@
 # CLAUDE.md
 
 ## Project overview
-- `GHGetRepos` is a native macOS 14+ SwiftUI app that downloads repositories owned by a GitHub account into a user-selected folder.
-- The UI lives in `GHGetRepos/Views/`.
-- App state and download logic live in `GHGetRepos/Model/`.
-- Tests live in `GHGetReposTests/`.
+- `GHGetRepos` is a native macOS 14+ SwiftUI app with two tools: downloading repositories and reporting total release-asset downloads for a GitHub account.
+- The Xcode project is under `Xcode-project/`.
+- App source lives in `Xcode-project/GHGetRepos/`.
+- UI code lives in `Xcode-project/GHGetRepos/Views/`.
+- State, networking, and run logic live in `Xcode-project/GHGetRepos/Model/`.
 
 ## Important files
-- `GHGetRepos/GHGetReposApp.swift`: app entry point.
-- `GHGetRepos/Views/ContentView.swift`: main window and download controls.
-- `GHGetRepos/Views/SettingsView.swift`: username, token, and destination settings UI.
-- `GHGetRepos/Model/AppViewModel.swift`: run lifecycle, output log state, and cancellation handling.
-- `GHGetRepos/Model/RepositoryDownloadRunner.swift`: repository listing, archive download, extraction, and result summary logic.
-- `GHGetRepos/Model/GitHubAPI.swift`: GitHub API models, requests, and download helpers.
-- `GHGetRepos/Model/SettingsStore.swift`: persisted settings and destination selection.
-- `GHGetRepos/Model/KeychainTokenStore.swift`: Keychain-backed token storage.
+- `Xcode-project/GHGetRepos/GHGetReposApp.swift`: app entry point and shared `SettingsStore` injection.
+- `Xcode-project/GHGetRepos/Views/ContentView.swift`: main two-tab window (`Get Repos` + `Total Downloads`).
+- `Xcode-project/GHGetRepos/Views/SettingsView.swift`: username, token, and language settings UI.
+- `Xcode-project/GHGetRepos/Views/OutputLogView.swift`: selectable live log output with auto-scroll behavior.
+- `Xcode-project/GHGetRepos/Model/AppViewModel.swift`: shared run lifecycle, cancellation handling, and per-tool view models.
+- `Xcode-project/GHGetRepos/Model/RepositoryDownloadRunner.swift`: repository listing, git clone flow, total-downloads report flow, and result summaries.
+- `Xcode-project/GHGetRepos/Model/GitHubAPI.swift`: GitHub API models, requests, and HTTP helpers.
+- `Xcode-project/GHGetRepos/Model/SettingsStore.swift`: persisted username/language/destination plus token-loading bridge.
+- `Xcode-project/GHGetRepos/Model/KeychainTokenStore.swift`: Keychain-backed token storage (`github-repo-downloads` service).
 
 ## Working conventions
 - Prefer small, focused SwiftUI and model changes.
 - Keep token handling in the Keychain-backed store; do not move secrets into `UserDefaults`.
-- Preserve cancellation behavior for downloads and archive extraction.
-- Preserve repository extraction safety checks, especially the rejection of invalid layouts and symlinks.
-- Preserve repository folder naming behavior that includes the repository ID.
+- Preserve cancellation behavior for long-running operations (repo cloning and downloads reporting).
+- Preserve git clone hardening in `RepositoryDownloadRunner` (validated clone URL, constrained git environment, temporary askpass files, and cleanup).
+- Preserve current destination behavior: repository folders are named by repository name, existing folders are skipped, and existing non-folder items fail.
 
 ## Validation
-- Open in Xcode: `GHGetRepos.xcodeproj`
-- Run tests from the repository root:
-  - `xcodebuild -project GHGetRepos.xcodeproj -scheme GHGetRepos -destination 'platform=macOS' test`
+- Open in Xcode: `Xcode-project/GHGetRepos.xcodeproj`
+- Validate from repository root:
+  - `xcodebuild -project Xcode-project/GHGetRepos.xcodeproj -scheme GHGetRepos -destination 'platform=macOS' build`
+- There is currently no test target checked into this repository.
 
 ## Notes for agents
 - This is a SwiftUI desktop app, not a package or command-line tool.
-- Most behavioral changes should include or update focused tests in `GHGetReposTests/` when practical.
+- The main app window uses a two-tab `TabView` for repository downloads and total-downloads reporting.
 - Avoid broad UI restyling unless the task specifically asks for it.

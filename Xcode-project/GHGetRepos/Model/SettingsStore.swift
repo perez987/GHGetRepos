@@ -1,7 +1,7 @@
 import Foundation
 
 #if canImport(AppKit)
-import AppKit
+    import AppKit
 #endif
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -415,18 +415,18 @@ final class SettingsStore: ObservableObject {
 
     func chooseDestinationDirectory() {
         #if canImport(AppKit)
-        let panel = NSOpenPanel()
-        panel.message = text(.chooseDestinationPanelMessage)
-        panel.prompt = text(.chooseDestinationPanelPrompt)
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = true
-        panel.directoryURL = destinationURL()
+            let panel = NSOpenPanel()
+            panel.message = text(.chooseDestinationPanelMessage)
+            panel.prompt = text(.chooseDestinationPanelPrompt)
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            panel.allowsMultipleSelection = false
+            panel.canCreateDirectories = true
+            panel.directoryURL = destinationURL()
 
-        if panel.runModal() == .OK, let selectedURL = panel.url {
-            destinationPath = selectedURL.path
-        }
+            if panel.runModal() == .OK, let selectedURL = panel.url {
+                destinationPath = selectedURL.path
+            }
         #endif
     }
 

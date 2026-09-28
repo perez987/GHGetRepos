@@ -1,7 +1,7 @@
 import Foundation
 
 #if canImport(FoundationNetworking)
-import FoundationNetworking
+    import FoundationNetworking
 #endif
 
 struct AuthenticatedGitHubUser: Decodable, Sendable {
@@ -122,6 +122,7 @@ struct GitHubAPIClient {
         }
         return apiHost
     }()
+
     static let repositoryPort = apiBaseURL.port
 
     private let apiBaseURL = Self.apiBaseURL

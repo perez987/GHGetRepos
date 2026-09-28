@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 #if canImport(AppKit)
-import AppKit
+    import AppKit
 #endif
 
 @MainActor
@@ -88,10 +88,10 @@ class BaseRunViewModel<Summary>: ObservableObject {
     func copyOutput() {
         let contents = outputLines.joined(separator: "\n")
         #if canImport(AppKit)
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(contents, forType: .string)
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(contents, forType: .string)
         #else
-        _ = contents
+            _ = contents
         #endif
     }
 
