@@ -23,7 +23,7 @@
 - Keep token handling in the Keychain-backed store; do not move secrets into `UserDefaults`.
 - Preserve cancellation behavior for long-running operations (repo cloning and downloads reporting).
 - Preserve git clone hardening in `RepositoryDownloadRunner` (validated clone URL, constrained git environment, temporary askpass files, and cleanup).
-- Preserve current destination behavior: repository folders are named by repository name, existing folders are skipped, and existing non-folder items fail.
+- Preserve current destination behavior: repository folders are named by repository name, existing folders are overwritten, and existing non-folder items fail.
 
 ## Validation
 - Open in Xcode: `Xcode-project/GHGetRepos.xcodeproj`

@@ -91,4 +91,4 @@ Two of these—the user password and the authentication password—should alread
 
 The app authenticates with the GitHub API, validates that the configured username matches the authenticated token owner, fetches only repositories owned by that account, and performs a shallow Git clone for each repository so the destination keeps a real `.git` directory without downloading the full history.
 
-If a destination folder for a repository already exists, the app skips that repository rather than overwriting local files. If a non-folder item already exists at that path, the app reports the repository as a failure instead.
+If a destination folder for a repository already exists, the app replaces that repository rather than skipping local files. If a non-folder item already exists at that path, the app reports the repository as a failure instead.
