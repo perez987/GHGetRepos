@@ -4,16 +4,27 @@ struct OutputLogView: View {
     private struct ScrollTrigger: Equatable {
         let lineCount: Int
         let lastLine: String?
+        let contentSize: CGSize
+    }
+
+    private struct ContentSizePreferenceKey: PreferenceKey {
+        static let defaultValue: CGSize = .zero
+
+        static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+            value = nextValue()
+        }
     }
 
     let lines: [String]
     let emptyStateText: String
     private let bottomAnchorID = "output-log-bottom-anchor"
+    @State private var contentSize: CGSize = .zero
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 6) {
+                // Eager layout keeps the bottom anchor accurate for wrapped log lines.
+                VStack(alignment: .leading, spacing: 6) {
                     if lines.isEmpty {
                         Text(emptyStateText)
                             .foregroundStyle(.secondary)
@@ -33,21 +44,27 @@ struct OutputLogView: View {
                 }
                 .textSelection(.enabled)
                 .padding(18)
+                .background {
+                    GeometryReader { geometry in
+                        Color.clear.preference(
+                            key: ContentSizePreferenceKey.self,
+                            value: geometry.size
+                        )
+                    }
+                }
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .onChange(of: ScrollTrigger(lineCount: lines.count, lastLine: lines.last)) { _, _ in
-                scrollToBottom(using: proxy)
+            .onPreferenceChange(ContentSizePreferenceKey.self) { size in
+                contentSize = size
             }
-            .onAppear {
-                scrollToBottom(using: proxy)
+            .task(id: ScrollTrigger(lineCount: lines.count, lastLine: lines.last, contentSize: contentSize)) {
+                // New output or completed layout cancels any stale scroll request.
+                await Task.yield()
+                guard !Task.isCancelled else {
+                    return
+                }
+                proxy.scrollTo(bottomAnchorID, anchor: .bottom)
             }
-        }
-    }
-
-    private func scrollToBottom(using proxy: ScrollViewProxy) {
-        Task { @MainActor in
-            await Task.yield()
-            proxy.scrollTo(bottomAnchorID, anchor: .bottom)
         }
     }
 }
