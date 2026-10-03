@@ -19,7 +19,7 @@ GH Get Repos is a native macOS app built with SwiftUI that:
 - Per-repository download into its own folder
 - Live output log with copy, clear, and cancel actions
 - Language system with selector in the Settings window
-- Xcode project with hardened runtime enabled and no App Sandbox
+- Xcode project with hardened runtime enabled and no App Sandbox.
 
 ## Requirements
 
@@ -39,11 +39,11 @@ GH Get Repos is a native macOS app built with SwiftUI that:
 | :--------------------------- |
 | ![Window](Images/Window2.png) |
 
-## Open the project
+## Xcode project
 
 Open `GHGetRepos.xcodeproj` in Xcode 16 or later and run the **GHGetRepos** scheme.
 
-## Configure credentials in the app
+## Configure credentials
 
 1. Open **Settings**
 2. Enter the GitHub username to query
@@ -73,7 +73,7 @@ A Personal Access Token (classic) is used to authenticate requests to the GitHub
 7. Select `repo` scope
 8. Click **Generate token** and copy it immediately. GitHub does not show the full value again later.
 
-### Keys in Keychain
+### Keychain
 
 For the app to work, three items must exist in the Keychain:
 
