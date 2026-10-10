@@ -99,8 +99,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .errorInvalidResponse: "GitHub returned an invalid response."
             case .errorServer: "GitHub API error (HTTP %d): %@"
             case .errorUnsuccessfulResponse: "GitHub returned an unsuccessful response."
-            case .errorGitCloneFailed: "The repository could not be cloned as a Git repository."
-            case .errorGitCloneFailedWithDetails: "The repository could not be cloned as a Git repository: %@"
+            case .errorRepositoryArchiveFailed: "The repository archive could not be downloaded or extracted."
+            case .errorRepositoryArchiveFailedWithDetails: "The repository archive could not be downloaded or extracted: %@"
             case .errorRepositoryInstallFailed: "The refreshed repository could not be installed: %@"
             case .errorRepositoryInstallFailedRestoreUnavailable: "The refreshed repository could not be installed: %@ The previous copy could not be restored automatically."
             case .errorRepositoryInstallFailedWithRestoreFailure: "The refreshed repository could not be installed: %@ The previous copy also could not be restored: %@"
@@ -194,8 +194,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             case .errorInvalidResponse: "GitHub devolvió una respuesta no válida."
             case .errorServer: "Error de la API de GitHub (HTTP %d): %@"
             case .errorUnsuccessfulResponse: "GitHub devolvió una respuesta fallida."
-            case .errorGitCloneFailed: "No se pudo clonar el repositorio como un repositorio Git."
-            case .errorGitCloneFailedWithDetails: "No se pudo clonar el repositorio como un repositorio Git: %@"
+            case .errorRepositoryArchiveFailed: "No se pudo descargar o extraer el archivo del repositorio."
+            case .errorRepositoryArchiveFailedWithDetails: "No se pudo descargar o extraer el archivo del repositorio: %@"
             case .errorRepositoryInstallFailed: "No se pudo instalar el repositorio actualizado: %@"
             case .errorRepositoryInstallFailedRestoreUnavailable: "No se pudo instalar el repositorio actualizado: %@ No se pudo restaurar automáticamente la copia anterior."
             case .errorRepositoryInstallFailedWithRestoreFailure: "No se pudo instalar el repositorio actualizado: %@ Tampoco se pudo restaurar la copia anterior: %@"
@@ -308,8 +308,8 @@ enum L10nKey {
     case errorInvalidResponse
     case errorServer
     case errorUnsuccessfulResponse
-    case errorGitCloneFailed
-    case errorGitCloneFailedWithDetails
+    case errorRepositoryArchiveFailed
+    case errorRepositoryArchiveFailedWithDetails
     case errorRepositoryInstallFailed
     case errorRepositoryInstallFailedRestoreUnavailable
     case errorRepositoryInstallFailedWithRestoreFailure
@@ -342,6 +342,7 @@ final class SettingsStore: ObservableObject {
     private enum Keys {
         static let username = "githubUsername"
         static let destinationPath = "destinationPath"
+        static let destinationBookmark = "destinationBookmark"
         static let language = "appLanguage"
     }
 
@@ -393,6 +394,37 @@ final class SettingsStore: ObservableObject {
         return URL(fileURLWithPath: trimmedPath, isDirectory: true)
     }
 
+    /// Returns the destination folder resolved from its security-scoped bookmark when available, so the
+    /// sandboxed app can regain access to a user-selected folder after relaunch. Callers must wrap file
+    /// access with `startAccessingSecurityScopedResource()` / `stopAccessingSecurityScopedResource()`.
+    func securityScopedDestinationURL() -> URL? {
+        guard let pathURL = destinationURL() else {
+            return nil
+        }
+        guard let bookmarkData = UserDefaults.standard.data(forKey: Keys.destinationBookmark) else {
+            return pathURL
+        }
+
+        var isStale = false
+        guard let resolvedURL = try? URL(
+            resolvingBookmarkData: bookmarkData,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        ) else {
+            return pathURL
+        }
+
+        if isStale {
+            storeDestinationBookmark(for: resolvedURL)
+        }
+        if resolvedURL.standardizedFileURL.path != pathURL.standardizedFileURL.path {
+            // The bookmarked folder was moved or renamed; follow it.
+            destinationPath = resolvedURL.path
+        }
+        return resolvedURL
+    }
+
     func loadToken() -> String? {
         try? keychain.readToken(for: trimmedUsername())
     }
@@ -431,9 +463,28 @@ final class SettingsStore: ObservableObject {
             panel.directoryURL = destinationURL()
 
             if panel.runModal() == .OK, let selectedURL = panel.url {
+                UserDefaults.standard.removeObject(forKey: Keys.destinationBookmark)
+                storeDestinationBookmark(for: selectedURL)
                 destinationPath = selectedURL.path
             }
         #endif
+    }
+
+    private func storeDestinationBookmark(for url: URL) {
+        let isAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if isAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        if let bookmarkData = try? url.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        ) {
+            UserDefaults.standard.set(bookmarkData, forKey: Keys.destinationBookmark)
+        }
     }
 
     private func refreshStoredTokenState() {

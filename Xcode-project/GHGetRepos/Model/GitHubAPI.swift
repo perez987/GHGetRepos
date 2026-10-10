@@ -67,7 +67,7 @@ enum GitHubAPIError: LocalizedError {
     case usernameTokenMismatch(expected: String, actual: String)
     case invalidResponse
     case server(statusCode: Int, message: String, fallback: ServerMessageFallback?)
-    case gitCloneFailed(String?)
+    case repositoryArchiveFailed(String?)
     case repositoryInstallFailed(String)
     case repositoryInstallFailedRestoreUnavailable(String)
     case repositoryInstallFailedWithRestoreFailure(installDetails: String, restoreDetails: String)
@@ -98,12 +98,12 @@ enum GitHubAPIError: LocalizedError {
                 localizedMessage = message
             }
             return language.formatted(.errorServer, statusCode, localizedMessage)
-        case let .gitCloneFailed(details):
+        case let .repositoryArchiveFailed(details):
             let trimmedDetails = details?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             guard trimmedDetails.isEmpty == false else {
-                return language.text(.errorGitCloneFailed)
+                return language.text(.errorRepositoryArchiveFailed)
             }
-            return language.formatted(.errorGitCloneFailedWithDetails, trimmedDetails)
+            return language.formatted(.errorRepositoryArchiveFailedWithDetails, trimmedDetails)
         case let .repositoryInstallFailed(details):
             return language.formatted(.errorRepositoryInstallFailed, details.trimmingCharacters(in: .whitespacesAndNewlines))
         case let .repositoryInstallFailedRestoreUnavailable(details):
@@ -202,6 +202,25 @@ struct GitHubAPIClient {
                 URLQueryItem(name: "page", value: String(page)),
             ]
         )
+    }
+
+    /// Downloads a gzipped tarball of the repository's default branch to `destinationURL`.
+    func downloadRepositoryTarball(ownerName: String, repositoryName: String, to destinationURL: URL) async throws {
+        let request = try makeRequest(pathComponents: ["repos", ownerName, repositoryName, "tarball"], queryItems: [])
+        let (temporaryURL, response) = try await URLSession.shared.download(for: request)
+        defer {
+            try? FileManager.default.removeItem(at: temporaryURL)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw GitHubAPIError.invalidResponse
+        }
+        if (200 ... 299).contains(httpResponse.statusCode) == false {
+            let data = (try? Data(contentsOf: temporaryURL)) ?? Data()
+            try validate(response: response, data: data)
+            throw GitHubAPIError.invalidResponse
+        }
+        try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
     }
 
     private func get<T: Decodable>(pathComponents: [String], queryItems: [URLQueryItem]) async throws -> T {

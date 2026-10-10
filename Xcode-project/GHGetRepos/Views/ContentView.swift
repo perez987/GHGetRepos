@@ -130,7 +130,7 @@ struct RepositoryDownloadsView: View {
                     viewModel.run(
                         username: settings.trimmedUsername(),
                         token: settings.loadToken(),
-                        destinationDirectory: settings.destinationURL(),
+                        destinationDirectory: settings.securityScopedDestinationURL(),
                         language: settings.language
                     )
                 } label: {

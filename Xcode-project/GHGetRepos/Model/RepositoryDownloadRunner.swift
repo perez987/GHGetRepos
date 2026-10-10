@@ -334,9 +334,10 @@ struct DownloadsReportRunner {
 
 private let maxUTF8BoundaryTrimBytes = 4
 
-private struct GitAskPassFiles {
+private struct RepositoryArchiveWorkspace {
     let directoryURL: URL
-    let scriptURL: URL
+    let archiveURL: URL
+    let extractionDirectoryURL: URL
     let outputFileURL: URL
 }
 
@@ -357,7 +358,18 @@ struct RepositoryDownloadRunner {
             throw GitHubAPIError.missingToken
         }
 
-        guard let destinationDirectory, isExistingDirectory(destinationDirectory) else {
+        guard let destinationDirectory else {
+            throw GitHubAPIError.invalidDestination
+        }
+
+        let isAccessingSecurityScopedDestination = destinationDirectory.startAccessingSecurityScopedResource()
+        defer {
+            if isAccessingSecurityScopedDestination {
+                destinationDirectory.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard isExistingDirectory(destinationDirectory) else {
             throw GitHubAPIError.invalidDestination
         }
 
@@ -404,8 +416,7 @@ struct RepositoryDownloadRunner {
                 let result = try await download(
                     repository: repository,
                     destinationDirectory: destinationDirectory,
-                    username: trimmedUsername,
-                    token: trimmedToken
+                    client: client
                 )
                 switch result {
                 case .downloaded:
@@ -449,7 +460,7 @@ struct RepositoryDownloadRunner {
         case replaced
     }
 
-    private func download(repository: GitHubRepository, destinationDirectory: URL, username: String, token: String) async throws -> RepositoryDownloadResult {
+    private func download(repository: GitHubRepository, destinationDirectory: URL, client: GitHubAPIClient) async throws -> RepositoryDownloadResult {
         let repositoryFolderURL = destinationDirectory.appendingPathComponent(destinationFolderName(for: repository), isDirectory: true)
         let stagingFolderURL = makeStagingFolderURL(for: repositoryFolderURL)
         var isDirectory: ObjCBool = false
@@ -460,7 +471,7 @@ struct RepositoryDownloadRunner {
         }
 
         do {
-            try await cloneRepository(repository, to: stagingFolderURL, username: username, token: token)
+            try await fetchRepositorySnapshot(repository, to: stagingFolderURL, client: client)
             try Task.checkCancellation()
             return try installClonedRepository(at: stagingFolderURL, to: repositoryFolderURL, repositoryName: repository.name)
         } catch {
@@ -471,26 +482,39 @@ struct RepositoryDownloadRunner {
         }
     }
 
-    private func cloneRepository(_ repository: GitHubRepository, to destinationURL: URL, username: String, token: String) async throws {
-        let cloneURL = try validatedCloneURL(for: repository)
-        let askPassFiles = try makeGitAskPassFiles(token: token)
+    /// Downloads the default-branch tarball through the GitHub API and extracts it into `stagingFolderURL`.
+    /// This avoids launching `/usr/bin/git`, which is an `xcrun` shim that refuses to run inside the App Sandbox.
+    private func fetchRepositorySnapshot(_ repository: GitHubRepository, to stagingFolderURL: URL, client: GitHubAPIClient) async throws {
+        let workspace = try makeArchiveWorkspace()
         defer {
-            try? FileManager.default.removeItem(at: askPassFiles.directoryURL)
+            try? FileManager.default.removeItem(at: workspace.directoryURL)
         }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.currentDirectoryURL = destinationURL.deletingLastPathComponent()
-        process.arguments = cloneArguments(for: repository, cloneURL: cloneURL, destinationName: destinationURL.lastPathComponent)
-        process.environment = gitEnvironment(
-            username: username,
-            scriptURL: askPassFiles.scriptURL,
-            homeDirectory: askPassFiles.directoryURL
+        try await client.downloadRepositoryTarball(
+            ownerName: repository.owner.login,
+            repositoryName: repository.name,
+            to: workspace.archiveURL
         )
-        let outputHandle = try FileHandle(forWritingTo: askPassFiles.outputFileURL)
+        try Task.checkCancellation()
+        try await extractArchive(workspace)
+        try Task.checkCancellation()
+        try FileManager.default.moveItem(at: workspace.extractionDirectoryURL, to: stagingFolderURL)
+    }
+
+    private func extractArchive(_ workspace: RepositoryArchiveWorkspace) async throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        process.currentDirectoryURL = workspace.directoryURL
+        process.arguments = extractionArguments(
+            archivePath: workspace.archiveURL.path,
+            destinationPath: workspace.extractionDirectoryURL.path
+        )
+        process.environment = extractionEnvironment()
+        let outputHandle = try FileHandle(forWritingTo: workspace.outputFileURL)
         defer {
             try? outputHandle.close()
         }
+        process.standardInput = FileHandle.nullDevice
         process.standardError = outputHandle
         process.standardOutput = outputHandle
         let coordinator = ProcessContinuationCoordinator()
@@ -515,15 +539,15 @@ struct RepositoryDownloadRunner {
                     } else {
                         try? outputHandle.synchronize()
                         try? outputHandle.close()
-                        let details = processErrorMessage(from: askPassFiles.outputFileURL, maxByteCount: 8192)
-                        coordinator.resume(.failure(GitHubAPIError.gitCloneFailed(details)))
+                        let details = processErrorMessage(from: workspace.outputFileURL, maxByteCount: 8192)
+                        coordinator.resume(.failure(GitHubAPIError.repositoryArchiveFailed(details)))
                     }
                 }
 
                 do {
                     try process.run()
                 } catch {
-                    coordinator.resume(.failure(GitHubAPIError.gitCloneFailed(error.localizedDescription)))
+                    coordinator.resume(.failure(GitHubAPIError.repositoryArchiveFailed(error.localizedDescription)))
                 }
             }
         }, onCancel: {
@@ -534,19 +558,16 @@ struct RepositoryDownloadRunner {
         })
     }
 
-    func cloneArguments(for repository: GitHubRepository, cloneURL: String, destinationName: String) -> [String] {
-        var arguments = [
-            "-c", "credential.helper=",
-            "-c", "http.version=HTTP/1.1",
-            "clone",
-            "--depth", "1",
-            "--single-branch",
+    func extractionArguments(archivePath: String, destinationPath: String) -> [String] {
+        // GitHub tarballs wrap the contents in a single `<owner>-<repo>-<sha>/` folder; strip it.
+        // bsdtar refuses absolute paths, `..` components, and extraction through symlinks unless `-P` is passed.
+        [
+            "-x",
+            "-z",
+            "-f", archivePath,
+            "-C", destinationPath,
+            "--strip-components", "1",
         ]
-        if repository.defaultBranch.isEmpty == false {
-            arguments.append(contentsOf: ["--branch", repository.defaultBranch])
-        }
-        arguments.append(contentsOf: [cloneURL, destinationName])
-        return arguments
     }
 
     func destinationFolderName(for repository: GitHubRepository) -> String {
@@ -668,7 +689,7 @@ struct RepositoryDownloadRunner {
         return .downloaded
     }
 
-    private func makeGitAskPassFiles(token: String) throws -> GitAskPassFiles {
+    private func makeArchiveWorkspace() throws -> RepositoryArchiveWorkspace {
         let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         do {
             try FileManager.default.createDirectory(
@@ -677,49 +698,27 @@ struct RepositoryDownloadRunner {
                 attributes: [.posixPermissions: 0o700]
             )
 
-            let tokenFileURL = directoryURL.appendingPathComponent("git-token")
-            let createdTokenFile = FileManager.default.createFile(
-                atPath: tokenFileURL.path,
-                contents: Data(token.utf8),
-                attributes: [.posixPermissions: 0o600]
+            let extractionDirectoryURL = directoryURL.appendingPathComponent("extracted", isDirectory: true)
+            try FileManager.default.createDirectory(
+                at: extractionDirectoryURL,
+                withIntermediateDirectories: false,
+                attributes: [.posixPermissions: 0o700]
             )
-            guard createdTokenFile else {
-                throw GitHubAPIError.gitCloneFailed(nil)
-            }
 
-            let outputFileURL = directoryURL.appendingPathComponent("git-output")
+            let outputFileURL = directoryURL.appendingPathComponent("tar-output")
             let createdOutputFile = FileManager.default.createFile(
                 atPath: outputFileURL.path,
                 contents: Data(),
                 attributes: [.posixPermissions: 0o600]
             )
             guard createdOutputFile else {
-                throw GitHubAPIError.gitCloneFailed(nil)
+                throw GitHubAPIError.repositoryArchiveFailed(nil)
             }
 
-            let scriptURL = directoryURL.appendingPathComponent("git-askpass.sh")
-            let script = """
-            #!/bin/sh
-            script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-            prompt=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
-            case "$prompt" in
-              *username*|*"user name"*)
-                printf '%s\n' "$GHGETREPOS_GIT_USERNAME"
-                ;;
-              *password*|*token*)
-                tr -d '\n' < "$script_dir/git-token"
-                printf '\n'
-                ;;
-              *)
-                printf '\n'
-                ;;
-            esac
-            """
-            try script.write(to: scriptURL, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: scriptURL.path)
-            return GitAskPassFiles(
+            return RepositoryArchiveWorkspace(
                 directoryURL: directoryURL,
-                scriptURL: scriptURL,
+                archiveURL: directoryURL.appendingPathComponent("repository.tar.gz"),
+                extractionDirectoryURL: extractionDirectoryURL,
                 outputFileURL: outputFileURL
             )
         } catch {
@@ -728,104 +727,15 @@ struct RepositoryDownloadRunner {
         }
     }
 
-    private func gitEnvironment(username: String, scriptURL: URL, homeDirectory: URL) -> [String: String] {
+    private func extractionEnvironment() -> [String: String] {
         let inheritedEnvironment = ProcessInfo.processInfo.environment
         var environment: [String: String] = [:]
-        for key in [
-            "PATH",
-            "TMPDIR",
-            "LANG",
-            "LC_ALL",
-            "USER",
-            "LOGNAME",
-            "SSL_CERT_FILE",
-            "SSL_CERT_DIR",
-            "CURL_CA_BUNDLE",
-            "http_proxy",
-            "https_proxy",
-            "HTTP_PROXY",
-            "HTTPS_PROXY",
-            "no_proxy",
-            "NO_PROXY",
-            "ALL_PROXY",
-        ] {
+        for key in ["PATH", "TMPDIR", "LANG", "LC_ALL"] {
             if let value = inheritedEnvironment[key] {
                 environment[key] = value
             }
         }
-        environment["HOME"] = homeDirectory.path
-        environment["GIT_CONFIG_NOSYSTEM"] = "1"
-        environment["GIT_TERMINAL_PROMPT"] = "0"
-        environment["GIT_ASKPASS"] = scriptURL.path
-        environment["GHGETREPOS_GIT_USERNAME"] = username
         return environment
-    }
-
-    func validatedCloneURL(for repository: GitHubRepository) throws -> String {
-        let actualComponents = try normalizedCloneURLComponents(for: repository.cloneURL)
-        let expectedComponents = try expectedCloneURLComponents(for: repository)
-        guard actualComponents.scheme?.caseInsensitiveCompare(expectedComponents.scheme ?? "") == .orderedSame,
-              actualComponents.host?.caseInsensitiveCompare(expectedComponents.host ?? "") == .orderedSame
-        else {
-            throw GitHubAPIError.invalidResponse
-        }
-        guard normalizedHTTPSPort(for: actualComponents) == normalizedHTTPSPort(for: expectedComponents) else {
-            throw GitHubAPIError.invalidResponse
-        }
-        guard decodedPathComponents(from: actualComponents).elementsEqual(
-            decodedPathComponents(from: expectedComponents),
-            by: { $0.caseInsensitiveCompare($1) == .orderedSame }
-        ) else {
-            throw GitHubAPIError.invalidResponse
-        }
-        guard let normalizedURL = expectedComponents.url else {
-            throw GitHubAPIError.invalidResponse
-        }
-        return normalizedURL.absoluteString
-    }
-
-    private func normalizedCloneURLComponents(for cloneURL: String) throws -> URLComponents {
-        guard let components = URLComponents(string: cloneURL),
-              components.scheme?.caseInsensitiveCompare("https") == .orderedSame,
-              components.query == nil,
-              components.fragment == nil,
-              components.user == nil,
-              components.percentEncodedUser == nil,
-              components.password == nil,
-              components.percentEncodedPassword == nil,
-              components.percentEncodedPath.contains(";") == false,
-              components.url != nil
-        else {
-            throw GitHubAPIError.invalidResponse
-        }
-        return components
-    }
-
-    private func expectedCloneURLComponents(for repository: GitHubRepository) throws -> URLComponents {
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = GitHubAPIClient.repositoryHost
-        components.port = GitHubAPIClient.repositoryPort
-        components.percentEncodedPath = "/" + percentEncodedPathComponent(repository.owner.login) + "/" + percentEncodedPathComponent(repository.name) + ".git"
-        guard components.url != nil else {
-            throw GitHubAPIError.invalidResponse
-        }
-        return components
-    }
-
-    private func normalizedHTTPSPort(for components: URLComponents) -> Int {
-        components.port ?? 443
-    }
-
-    private func decodedPathComponents(from components: URLComponents) -> [String] {
-        (components.url?.pathComponents ?? [])
-            .filter { $0 != "/" }
-            .map { $0.removingPercentEncoding ?? $0 }
-    }
-
-    private func percentEncodedPathComponent(_ component: String) -> String {
-        let allowedCharacters = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))
-        return component.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? component
     }
 
     func processErrorMessage(from fileURL: URL, maxByteCount: Int) -> String? {

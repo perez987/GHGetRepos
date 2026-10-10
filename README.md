@@ -19,7 +19,7 @@ GH Get Repos is a native macOS app built with SwiftUI that:
 - Per-repository download into its own folder
 - Live output log with copy, clear, and cancel actions
 - Language system with selector in the Settings window
-- Xcode project with hardened runtime enabled and no App Sandbox.
+- Xcode project with hardened runtime and App Sandbox enabled.
 
 ## Requirements
 
@@ -87,8 +87,14 @@ Two of these—the user password and the authentication password—should alread
 | :------------------------------- |
 | ![Keychain](Images/Keychain.png) |
 
-## Download behavior
+## Motivation and download behavior
 
-The app authenticates with the GitHub API, validates that the configured username matches the authenticated token owner, fetches only repositories owned by that account, and performs a shallow Git clone for each repository so the destination keeps a real `.git` directory without downloading the full history.
+The app authenticates with the GitHub API, validates that the configured username matches the authenticated token owner, fetches only repositories owned by that account, and downloads a snapshot of each repository's default branch as a tarball through the GitHub API, extracting it with `/usr/bin/tar` inside the app container before moving it into the destination folder.
+
+The app does not run `git`: under the App Sandbox, `/usr/bin/git` is an `xcrun` shim that refuses to run (`xcrun: error: cannot be used within an App Sandbox`). As a result, downloaded folders contain the repository files but no `.git` directory or history.
+
+Think of this app as a very simple way to back up all your GitHub repositories. The destination folder should not be your working repository folder, as it lacks the `.git` folder containing the change history. In the event of an issue requiring you to restore a repository's contents or recreate it from scratch, you can upload the backup files from your computer to GitHub.
+
+The destination folder is remembered with a security-scoped bookmark, so the sandboxed app keeps access to it after relaunch.
 
 If a destination folder for a repository already exists, the app replaces that repository rather than skipping local files. If a non-folder item already exists at that path, the app reports the repository as a failure instead.
