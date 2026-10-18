@@ -4,12 +4,12 @@ import Foundation
     import FoundationNetworking
 #endif
 
-struct AuthenticatedGitHubUser: Decodable, Sendable {
+struct AuthenticatedGitHubUser: Decodable {
     let login: String
 }
 
-struct GitHubAccount: Decodable, Sendable {
-    enum AccountType: String, Decodable, Sendable {
+struct GitHubAccount: Decodable {
+    enum AccountType: String, Decodable {
         case user = "User"
         case organization = "Organization"
     }
@@ -18,8 +18,8 @@ struct GitHubAccount: Decodable, Sendable {
     let type: AccountType
 }
 
-struct GitHubRepository: Decodable, Sendable {
-    struct Owner: Decodable, Sendable {
+struct GitHubRepository: Decodable {
+    struct Owner: Decodable {
         let login: String
     }
 
@@ -40,11 +40,11 @@ struct GitHubRepository: Decodable, Sendable {
     }
 }
 
-struct GitHubRelease: Decodable, Sendable {
+struct GitHubRelease: Decodable {
     let assets: [GitHubAsset]
 }
 
-struct GitHubAsset: Decodable, Sendable {
+struct GitHubAsset: Decodable {
     let downloadCount: Int
 
     private enum CodingKeys: String, CodingKey {
@@ -52,7 +52,7 @@ struct GitHubAsset: Decodable, Sendable {
     }
 }
 
-struct GitHubAPIErrorPayload: Decodable, Sendable {
+struct GitHubAPIErrorPayload: Decodable {
     let message: String
 }
 

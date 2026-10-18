@@ -15,12 +15,12 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-             RepositoryDownloadsView(viewModel: repositoryViewModel)
+            RepositoryDownloadsView(viewModel: repositoryViewModel)
                 .tabItem {
                     Label(settings.text(.repositoriesTab), systemImage: "square.and.arrow.down.fill")
                 }
                 .tag(Tab.repositories)
-             TotalDownloadsView(viewModel: totalDownloadsViewModel)
+            TotalDownloadsView(viewModel: totalDownloadsViewModel)
                 .tabItem {
                     Label(settings.text(.totalDownloadsTab), systemImage: "chart.bar.fill")
                 }
@@ -28,8 +28,8 @@ struct ContentView: View {
             TotalDownloadsView(viewModel: totalDownloadsViewModel)
         }
         // The native tab bar keeps the tab widths measured when it was created, so rebuild it
-         // when the language changes to avoid truncating longer translated titles.
-         .id(settings.language)
+        // when the language changes to avoid truncating longer translated titles.
+        .id(settings.language)
         .padding(.top, 6)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
