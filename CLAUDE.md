@@ -2,7 +2,7 @@
 
 ## Project overview
 
-- `GHGetRepos` is a native macOS 14+ SwiftUI app with two tools: downloading repositories and reporting total release-asset downloads for a GitHub account.
+- `GHGetRepos` is a native macOS 13+ SwiftUI app with two tools: downloading repositories and reporting total release-asset downloads for a GitHub account.
 - The Xcode project is under `Xcode-project/`.
 - App source lives in `Xcode-project/GHGetRepos/`.
 - UI code lives in `Xcode-project/GHGetRepos/Views/`.

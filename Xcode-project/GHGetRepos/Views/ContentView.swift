@@ -17,12 +17,18 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             RepositoryDownloadsView(viewModel: repositoryViewModel)
                 .tabItem {
-                    Label(settings.text(.repositoriesTab), systemImage: "square.and.arrow.down.fill")
+                    Label(
+                        settings.text(.repositoriesTab),
+                        systemImage: "square.and.arrow.down.fill"
+                    )
                 }
                 .tag(Tab.repositories)
             TotalDownloadsView(viewModel: totalDownloadsViewModel)
                 .tabItem {
-                    Label(settings.text(.totalDownloadsTab), systemImage: "chart.bar.fill")
+                    Label(
+                        settings.text(.totalDownloadsTab),
+                        systemImage: "chart.bar.fill"
+                    )
                 }
                 .tag(Tab.totalDownloads)
             TotalDownloadsView(viewModel: totalDownloadsViewModel)
@@ -33,8 +39,20 @@ struct ContentView: View {
         .padding(.top, 6)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                SettingsLink {
-                    Label(settings.text(.settings), systemImage: "gearshape")
+                if #available(macOS 14.0, *) {
+                    SettingsLink {
+                        Label(settings.text(.settings), systemImage: "gearshape")
+                    }
+                } else {
+                    Button {
+                        NSApp.sendAction(
+                            Selector(("showSettingsWindow:")),
+                            to: nil,
+                            from: nil
+                        )
+                    } label: {
+                        Label(settings.text(.settings), systemImage: "gearshape")
+                    }
                 }
             }
         }
@@ -79,8 +97,11 @@ struct RepositoryDownloadsView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label(settings.text(.appTitle), systemImage: "square.and.arrow.down.fill")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                    Label(
+                        settings.text(.appTitle),
+                        systemImage: "square.and.arrow.down.fill"
+                    )
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
                     Text(settings.text(.appSubtitle))
                         .font(.headline)
                         .foregroundStyle(.secondary)
@@ -93,20 +114,53 @@ struct RepositoryDownloadsView: View {
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
-                    detailChip(title: settings.text(.githubUser), value: settings.trimmedUsername().isEmpty ? settings.text(.notSet) : settings.trimmedUsername())
-                    detailChip(title: settings.text(.tokenLabel), value: settings.hasStoredToken ? settings.text(.tokenStored) : settings.text(.tokenRequired))
-                    detailChip(title: settings.text(.destinationLabel), value: settings.trimmedDestinationPath().isEmpty ? settings.text(.chooseAFolder) : settings.trimmedDestinationPath())
+                    detailChip(
+                        title: settings.text(.githubUser),
+                        value: settings.trimmedUsername().isEmpty
+                            ? settings.text(.notSet)
+                            : settings.trimmedUsername()
+                    )
+                    detailChip(
+                        title: settings.text(.tokenLabel),
+                        value: settings.hasStoredToken
+                            ? settings.text(.tokenStored)
+                            : settings.text(.tokenRequired)
+                    )
+                    detailChip(
+                        title: settings.text(.destinationLabel),
+                        value: settings.trimmedDestinationPath().isEmpty
+                            ? settings.text(.chooseAFolder)
+                            : settings.trimmedDestinationPath()
+                    )
                 }
 
                 VStack(spacing: 12) {
-                    detailChip(title: settings.text(.githubUser), value: settings.trimmedUsername().isEmpty ? settings.text(.notSet) : settings.trimmedUsername())
-                    detailChip(title: settings.text(.tokenLabel), value: settings.hasStoredToken ? settings.text(.tokenStored) : settings.text(.tokenRequired))
-                    detailChip(title: settings.text(.destinationLabel), value: settings.trimmedDestinationPath().isEmpty ? settings.text(.chooseAFolder) : settings.trimmedDestinationPath())
+                    detailChip(
+                        title: settings.text(.githubUser),
+                        value: settings.trimmedUsername().isEmpty
+                            ? settings.text(.notSet)
+                            : settings.trimmedUsername()
+                    )
+                    detailChip(
+                        title: settings.text(.tokenLabel),
+                        value: settings.hasStoredToken
+                            ? settings.text(.tokenStored)
+                            : settings.text(.tokenRequired)
+                    )
+                    detailChip(
+                        title: settings.text(.destinationLabel),
+                        value: settings.trimmedDestinationPath().isEmpty
+                            ? settings.text(.chooseAFolder)
+                            : settings.trimmedDestinationPath()
+                    )
                 }
             }
         }
         .padding(24)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(.white.opacity(0.15), lineWidth: 1)
@@ -117,20 +171,32 @@ struct RepositoryDownloadsView: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) {
                 ForEach(repositoryMetrics) { metric in
-                    summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                    summaryCard(
+                        title: metric.title,
+                        value: metric.value,
+                        symbol: metric.symbol
+                    )
                 }
             }
 
             VStack(spacing: 16) {
                 HStack(spacing: 16) {
                     ForEach(Array(repositoryMetrics.prefix(2))) { metric in
-                        summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                        summaryCard(
+                            title: metric.title,
+                            value: metric.value,
+                            symbol: metric.symbol
+                        )
                     }
                 }
 
                 HStack(spacing: 16) {
                     ForEach(Array(repositoryMetrics.suffix(2))) { metric in
-                        summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                        summaryCard(
+                            title: metric.title,
+                            value: metric.value,
+                            symbol: metric.symbol
+                        )
                     }
                 }
             }
@@ -148,12 +214,23 @@ struct RepositoryDownloadsView: View {
                         language: settings.language
                     )
                 } label: {
-                    Label(settings.text(viewModel.isRunning ? .downloading : .downloadRepositories), systemImage: viewModel.isRunning ? "hourglass" : "play.fill")
-                        .frame(minWidth: 100)
+                    Label(
+                        settings.text(
+                            viewModel.isRunning
+                                ? .downloading : .downloadRepositories
+                        ),
+                        systemImage: viewModel.isRunning
+                            ? "hourglass" : "play.fill"
+                    )
+                    .frame(minWidth: 100)
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.extraLarge)
-                .disabled(viewModel.isRunning || settings.trimmedUsername().isEmpty || settings.hasStoredToken == false || settings.destinationURL() == nil)
+                .controlSize(.large)
+                .disabled(
+                    viewModel.isRunning || settings.trimmedUsername().isEmpty
+                        || settings.hasStoredToken == false
+                        || settings.destinationURL() == nil
+                )
 
                 Button {
                     viewModel.cancel()
@@ -162,7 +239,7 @@ struct RepositoryDownloadsView: View {
                         .frame(minWidth: 90)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
+                .controlSize(.large)
                 .disabled(viewModel.isRunning == false)
 
                 Button {
@@ -172,7 +249,7 @@ struct RepositoryDownloadsView: View {
                         .frame(minWidth: 90)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
+                .controlSize(.large)
 
                 Button {
                     viewModel.copyOutput()
@@ -181,7 +258,7 @@ struct RepositoryDownloadsView: View {
                         .frame(minWidth: 90)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
+                .controlSize(.large)
                 .disabled(viewModel.outputLines.isEmpty)
 
                 Button {
@@ -191,11 +268,14 @@ struct RepositoryDownloadsView: View {
                         .frame(minWidth: 90)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
+                .controlSize(.large)
                 .disabled(viewModel.outputLines.isEmpty)
             }
 
-            if settings.trimmedUsername().isEmpty || settings.hasStoredToken == false || settings.destinationURL() == nil {
+            if settings.trimmedUsername().isEmpty
+                || settings.hasStoredToken == false
+                || settings.destinationURL() == nil
+            {
                 Text(settings.text(.openSettingsHint))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -214,13 +294,22 @@ struct RepositoryDownloadsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            OutputLogView(lines: viewModel.outputLines, emptyStateText: settings.text(.outputEmpty))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            OutputLogView(
+                lines: viewModel.outputLines,
+                emptyStateText: settings.text(.outputEmpty)
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                Color.black.opacity(0.22),
+                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+            )
         }
         .padding(22)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(
+            .regularMaterial,
+            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(.white.opacity(0.10), lineWidth: 1)
@@ -250,7 +339,9 @@ struct RepositoryDownloadsView: View {
         }
     }
 
-    private func summaryCard(title: String, value: String, symbol: String) -> some View {
+    private func summaryCard(title: String, value: String, symbol: String)
+        -> some View
+    {
         VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: symbol)
                 .font(.subheadline.weight(.semibold))
@@ -261,7 +352,10 @@ struct RepositoryDownloadsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(.white.opacity(0.10), lineWidth: 1)
@@ -281,10 +375,15 @@ struct RepositoryDownloadsView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            Color.white.opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
     }
 
-    private func summaryValue(_ transform: (RepositoryDownloadSummary) -> String) -> String {
+    private func summaryValue(
+        _ transform: (RepositoryDownloadSummary) -> String
+    ) -> String {
         guard let summary = viewModel.lastSummary else {
             return "—"
         }
@@ -293,10 +392,30 @@ struct RepositoryDownloadsView: View {
 
     private var repositoryMetrics: [Metric] {
         [
-            Metric(id: "repositories", title: settings.text(.repositories), value: summaryValue { String($0.repositoryCount) }, symbol: "shippingbox.fill"),
-            Metric(id: "downloaded", title: settings.text(.downloaded), value: summaryValue { String($0.downloadedCount) }, symbol: "arrow.down.circle.fill"),
-            Metric(id: "replaced", title: settings.text(.replaced), value: summaryValue { String($0.replacedCount) }, symbol: "arrow.triangle.2.circlepath.circle.fill"),
-            Metric(id: "failed", title: settings.text(.failed), value: summaryValue { String($0.failedCount) }, symbol: "exclamationmark.triangle.fill"),
+            Metric(
+                id: "repositories",
+                title: settings.text(.repositories),
+                value: summaryValue { String($0.repositoryCount) },
+                symbol: "shippingbox.fill"
+            ),
+            Metric(
+                id: "downloaded",
+                title: settings.text(.downloaded),
+                value: summaryValue { String($0.downloadedCount) },
+                symbol: "arrow.down.circle.fill"
+            ),
+            Metric(
+                id: "replaced",
+                title: settings.text(.replaced),
+                value: summaryValue { String($0.replacedCount) },
+                symbol: "arrow.triangle.2.circlepath.circle.fill"
+            ),
+            Metric(
+                id: "failed",
+                title: settings.text(.failed),
+                value: summaryValue { String($0.failedCount) },
+                symbol: "exclamationmark.triangle.fill"
+            ),
         ]
     }
 }
@@ -339,8 +458,11 @@ struct TotalDownloadsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label(settings.text(.totalDownloadsAppTitle), systemImage: "chart.bar.fill")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                    Label(
+                        settings.text(.totalDownloadsAppTitle),
+                        systemImage: "chart.bar.fill"
+                    )
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
                     Text(settings.text(.totalDownloadsAppSubtitle))
                         .font(.headline)
                         .foregroundStyle(.secondary)
@@ -352,15 +474,27 @@ struct TotalDownloadsView: View {
             }
 
             HStack(spacing: 12) {
-                detailChip(title: settings.text(.githubUser), value: settings.trimmedUsername().isEmpty ? settings.text(.notSet) : settings.trimmedUsername())
-                    .frame(maxWidth: heroDetailChipWidth, alignment: .leading)
-                detailChip(title: settings.text(.tokenLabel), value: settings.hasStoredToken ? settings.text(.tokenStored) : settings.text(.tokenOptional))
-                    .frame(maxWidth: heroDetailChipWidth, alignment: .leading)
+                detailChip(
+                    title: settings.text(.githubUser),
+                    value: settings.trimmedUsername().isEmpty
+                        ? settings.text(.notSet) : settings.trimmedUsername()
+                )
+                .frame(maxWidth: heroDetailChipWidth, alignment: .leading)
+                detailChip(
+                    title: settings.text(.tokenLabel),
+                    value: settings.hasStoredToken
+                        ? settings.text(.tokenStored)
+                        : settings.text(.tokenOptional)
+                )
+                .frame(maxWidth: heroDetailChipWidth, alignment: .leading)
                 Spacer(minLength: 0)
             }
         }
         .padding(24)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(.white.opacity(0.15), lineWidth: 1)
@@ -371,13 +505,21 @@ struct TotalDownloadsView: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) {
                 ForEach(totalDownloadMetrics) { metric in
-                    summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                    summaryCard(
+                        title: metric.title,
+                        value: metric.value,
+                        symbol: metric.symbol
+                    )
                 }
             }
 
             VStack(spacing: 16) {
                 ForEach(totalDownloadMetrics) { metric in
-                    summaryCard(title: metric.title, value: metric.value, symbol: metric.symbol)
+                    summaryCard(
+                        title: metric.title,
+                        value: metric.value,
+                        symbol: metric.symbol
+                    )
                 }
             }
         }
@@ -387,14 +529,26 @@ struct TotalDownloadsView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Button {
-                    viewModel.run(username: settings.trimmedUsername(), token: settings.loadToken(), language: settings.language)
+                    viewModel.run(
+                        username: settings.trimmedUsername(),
+                        token: settings.loadToken(),
+                        language: settings.language
+                    )
                 } label: {
-                    Label(settings.text(viewModel.isRunning ? .running : .runReport), systemImage: viewModel.isRunning ? "hourglass" : "play.fill")
-                        .frame(minWidth: 120)
+                    Label(
+                        settings.text(
+                            viewModel.isRunning ? .running : .runReport
+                        ),
+                        systemImage: viewModel.isRunning
+                            ? "hourglass" : "play.fill"
+                    )
+                    .frame(minWidth: 120)
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.extraLarge)
-                .disabled(viewModel.isRunning || settings.trimmedUsername().isEmpty)
+                .controlSize(.large)
+                .disabled(
+                    viewModel.isRunning || settings.trimmedUsername().isEmpty
+                )
 
                 Button {
                     viewModel.cancel()
@@ -402,7 +556,7 @@ struct TotalDownloadsView: View {
                     Label(settings.text(.cancel), systemImage: "stop.fill")
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
+                .controlSize(.large)
                 .disabled(viewModel.isRunning == false)
 
                 Button {
@@ -411,7 +565,7 @@ struct TotalDownloadsView: View {
                     Label(settings.text(.copy), systemImage: "doc.on.doc")
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
+                .controlSize(.large)
                 .disabled(viewModel.outputLines.isEmpty)
 
                 Button {
@@ -420,7 +574,7 @@ struct TotalDownloadsView: View {
                     Label(settings.text(.clear), systemImage: "trash")
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.extraLarge)
+                .controlSize(.large)
                 .disabled(viewModel.outputLines.isEmpty)
             }
 
@@ -447,13 +601,22 @@ struct TotalDownloadsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            OutputLogView(lines: viewModel.outputLines, emptyStateText: settings.text(.reportOutputEmpty))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            OutputLogView(
+                lines: viewModel.outputLines,
+                emptyStateText: settings.text(.reportOutputEmpty)
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                Color.black.opacity(0.22),
+                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+            )
         }
         .padding(22)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(
+            .regularMaterial,
+            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(.white.opacity(0.10), lineWidth: 1)
@@ -483,7 +646,9 @@ struct TotalDownloadsView: View {
         }
     }
 
-    private func summaryCard(title: String, value: String, symbol: String) -> some View {
+    private func summaryCard(title: String, value: String, symbol: String)
+        -> some View
+    {
         VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: symbol)
                 .font(.subheadline.weight(.semibold))
@@ -494,7 +659,10 @@ struct TotalDownloadsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(.white.opacity(0.10), lineWidth: 1)
@@ -512,10 +680,15 @@ struct TotalDownloadsView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            Color.white.opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
     }
 
-    private func summaryValue(_ transform: (DownloadsReportSummary) -> String) -> String {
+    private func summaryValue(_ transform: (DownloadsReportSummary) -> String)
+        -> String
+    {
         guard let summary = viewModel.lastSummary else {
             return "—"
         }
@@ -524,9 +697,24 @@ struct TotalDownloadsView: View {
 
     private var totalDownloadMetrics: [Metric] {
         [
-            Metric(id: "repositories", title: settings.text(.repositories), value: summaryValue { String($0.repositoryCount) }, symbol: "shippingbox.fill"),
-            Metric(id: "with-downloads", title: settings.text(.withDownloads), value: summaryValue { String($0.repositoriesWithDownloads) }, symbol: "checkmark.seal.fill"),
-            Metric(id: "total-downloads", title: settings.text(.totalDownloads), value: summaryValue { String($0.totalDownloads) }, symbol: "chart.bar.fill"),
+            Metric(
+                id: "repositories",
+                title: settings.text(.repositories),
+                value: summaryValue { String($0.repositoryCount) },
+                symbol: "shippingbox.fill"
+            ),
+            Metric(
+                id: "with-downloads",
+                title: settings.text(.withDownloads),
+                value: summaryValue { String($0.repositoriesWithDownloads) },
+                symbol: "checkmark.seal.fill"
+            ),
+            Metric(
+                id: "total-downloads",
+                title: settings.text(.totalDownloads),
+                value: summaryValue { String($0.totalDownloads) },
+                symbol: "chart.bar.fill"
+            ),
         ]
     }
 }

@@ -1,6 +1,6 @@
 # GH Get Repos: fetch all GitHub repositories or know the total count of asset downloads
 
-![Platform](https://img.shields.io/badge/macOS-14%2B-orange.svg)
+![Platform](https://img.shields.io/badge/macOS-13%2B-orange.svg)
 ![Swift](https://img.shields.io/badge/Swift-5-green.svg)
 ![Xcode](https://img.shields.io/badge/Xcode-16-blue.svg)
 
@@ -23,7 +23,7 @@ GH Get Repos is a native macOS app built with SwiftUI that:
 
 ## Requirements
 
-- macOS 14 or later
+- macOS 13 or later
 - Xcode 16 or later
 - Swift 5
 

@@ -43,7 +43,9 @@ class BaseRunViewModel<Summary>: ObservableObject {
 
     func startRun(
         language: AppLanguage,
-        operation: @escaping @Sendable (@escaping @Sendable (String) async -> Void) async throws -> Summary
+        operation:
+            @escaping @Sendable (@escaping @Sendable (String) async -> Void)
+            async throws -> Summary
     ) {
         let runID = UUID()
         let previousTask = currentTask
@@ -154,13 +156,19 @@ class BaseRunViewModel<Summary>: ObservableObject {
         }
 
         let nsError = error as NSError
-        return nsError.domain == NSURLErrorDomain && nsError.code == URLError.cancelled.rawValue
+        return nsError.domain == NSURLErrorDomain
+            && nsError.code == URLError.cancelled.rawValue
     }
 }
 
 @MainActor
 final class AppViewModel: BaseRunViewModel<RepositoryDownloadSummary> {
-    func run(username: String, token: String?, destinationDirectory: URL?, language: AppLanguage) {
+    func run(
+        username: String,
+        token: String?,
+        destinationDirectory: URL?,
+        language: AppLanguage
+    ) {
         startRun(language: language) { emit in
             try await RepositoryDownloadRunner(
                 username: username,

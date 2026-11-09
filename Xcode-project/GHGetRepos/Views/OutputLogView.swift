@@ -16,6 +16,27 @@ struct OutputLogView: View {
         }
     }
 
+    // macOS 14+ uses default scroll anchors; macOS 13 scrolls to the last line on appear.
+    private struct InitialScrollPositionModifier: ViewModifier {
+        let proxy: ScrollViewProxy
+        let lines: [String]
+
+        func body(content: Content) -> some View {
+            if #available(macOS 14.0, *) {
+                content
+                    .defaultScrollAnchor(.bottomTrailing)
+                    .defaultScrollAnchor(.trailing)
+            } else {
+                content
+                    .onAppear {
+                        if let lastLine = lines.last {
+                            proxy.scrollTo(lastLine, anchor: .bottom)
+                        }
+                    }
+            }
+        }
+    }
+
     let lines: [String]
     let emptyStateText: String
     private let bottomAnchorID = "output-log-bottom-anchor"
@@ -33,10 +54,17 @@ struct OutputLogView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.top, 4)
                         } else {
-                            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                            ForEach(Array(lines.enumerated()), id: \.offset) {
+                                index,
+                                line in
                                 Text(verbatim: line)
-                                    .font(.system(.footnote, design: .monospaced))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .font(
+                                        .system(.footnote, design: .monospaced)
+                                    )
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment: .leading
+                                    )
                                     .id("line-\(index)")
                             }
                         }
@@ -56,19 +84,21 @@ struct OutputLogView: View {
                         }
                     }
                 }
-                //                .defaultScrollAnchor(contentSize.height > viewport.size.height ? .bottom : .top)
-                .defaultScrollAnchor(.bottomTrailing)
-                .defaultScrollAnchor(.trailing)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .modifier(InitialScrollPositionModifier(proxy: proxy, lines: lines))
+                .clipShape(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                )
                 .onPreferenceChange(ContentSizePreferenceKey.self) { size in
                     contentSize = size
                 }
-                .task(id: ScrollTrigger(
-                    lineCount: lines.count,
-                    lastLine: lines.last,
-                    contentSize: contentSize,
-                    viewportSize: viewport.size
-                )) {
+                .task(
+                    id: ScrollTrigger(
+                        lineCount: lines.count,
+                        lastLine: lines.last,
+                        contentSize: contentSize,
+                        viewportSize: viewport.size
+                    )
+                ) {
                     // New output or completed layout cancels any stale scroll request.
                     await Task.yield()
                     guard !Task.isCancelled else {

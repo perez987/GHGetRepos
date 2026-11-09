@@ -8,14 +8,26 @@ struct GHGetReposApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(settings)
-                .frame(minWidth: 950, idealWidth: 950, minHeight: 720, idealHeight: 720)
+                .frame(
+                    minWidth: 950,
+                    idealWidth: 950,
+                    minHeight: 720,
+                    idealHeight: 720
+                )
         }
         .defaultSize(width: 950, height: 720)
 
         Settings {
             SettingsView()
                 .environmentObject(settings)
-                .frame(minWidth: 680, idealWidth: 680, maxWidth: 680, minHeight: 666, idealHeight: 666, maxHeight: 666)
+                .frame(
+                    minWidth: 680,
+                    idealWidth: 680,
+                    maxWidth: 680,
+                    minHeight: 666,
+                    idealHeight: 666,
+                    maxHeight: 666
+                )
         }
     }
 }

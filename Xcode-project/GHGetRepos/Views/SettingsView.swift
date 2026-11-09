@@ -31,14 +31,26 @@ struct SettingsView: View {
 
                 glassCard {
                     VStack(alignment: .leading, spacing: 14) {
-                        Label(settings.text(.githubUsername), systemImage: "person.crop.circle.fill")
-                            .font(.headline)
+                        Label(
+                            settings.text(.githubUsername),
+                            systemImage: "person.crop.circle.fill"
+                        )
+                        .font(.headline)
 
-                        TextField(settings.text(.usernamePlaceholder), text: $settings.githubUsername)
-                            .textFieldStyle(.plain)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        TextField(
+                            settings.text(.usernamePlaceholder),
+                            text: $settings.githubUsername
+                        )
+                        .textFieldStyle(.plain)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            Color.white.opacity(0.08),
+                            in: RoundedRectangle(
+                                cornerRadius: 14,
+                                style: .continuous
+                            )
+                        )
 
                         Text(settings.text(.usernameStoredHint))
                             .font(.body)
@@ -50,12 +62,21 @@ struct SettingsView: View {
                 glassCard {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
-                            Label(settings.text(.githubToken), systemImage: "key.fill")
-                                .font(.headline)
+                            Label(
+                                settings.text(.githubToken),
+                                systemImage: "key.fill"
+                            )
+                            .font(.headline)
                             Spacer()
-                            Text(settings.hasStoredToken ? settings.text(.tokenStored) : settings.text(.tokenNotSaved))
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(settings.hasStoredToken ? .green : .secondary)
+                            Text(
+                                settings.hasStoredToken
+                                    ? settings.text(.tokenStored)
+                                    : settings.text(.tokenNotSaved)
+                            )
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(
+                                settings.hasStoredToken ? .green : .secondary
+                            )
                         }
 
                         SecureField("ghp_…", text: $tokenInput)
@@ -64,7 +85,13 @@ struct SettingsView: View {
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(
+                                Color.white.opacity(0.08),
+                                in: RoundedRectangle(
+                                    cornerRadius: 14,
+                                    style: .continuous
+                                )
+                            )
 
                         Text(settings.text(.tokenStoredHint))
                             .font(.body)
@@ -75,7 +102,9 @@ struct SettingsView: View {
                                 do {
                                     try settings.saveToken(tokenInput)
                                     tokenInput = ""
-                                    saveMessage = settings.text(.tokenSavedMessage)
+                                    saveMessage = settings.text(
+                                        .tokenSavedMessage
+                                    )
                                     saveMessageIsSuccess = true
                                 } catch {
                                     saveMessage = settings.message(for: error)
@@ -88,7 +117,9 @@ struct SettingsView: View {
                                 do {
                                     try settings.deleteToken()
                                     tokenInput = ""
-                                    saveMessage = settings.text(.tokenDeletedMessage)
+                                    saveMessage = settings.text(
+                                        .tokenDeletedMessage
+                                    )
                                     saveMessageIsSuccess = true
                                 } catch {
                                     saveMessage = settings.message(for: error)
@@ -103,10 +134,16 @@ struct SettingsView: View {
 
                 glassCard {
                     VStack(alignment: .leading, spacing: 14) {
-                        Label(settings.text(.languageSelectorTitle), systemImage: "globe")
-                            .font(.headline)
+                        Label(
+                            settings.text(.languageSelectorTitle),
+                            systemImage: "globe"
+                        )
+                        .font(.headline)
 
-                        Picker(settings.text(.appLanguage), selection: $settings.language) {
+                        Picker(
+                            settings.text(.appLanguage),
+                            selection: $settings.language
+                        ) {
                             ForEach(AppLanguage.allCases) { language in
                                 Text(language.displayName)
                                     .tag(language)
@@ -127,12 +164,22 @@ struct SettingsView: View {
                         Text(saveMessage)
                             .font(.footnote.weight(.medium))
                     } icon: {
-                        Image(systemName: saveMessageIsSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        Image(
+                            systemName: saveMessageIsSuccess
+                                ? "checkmark.circle.fill"
+                                : "exclamationmark.triangle.fill"
+                        )
                     }
                     .foregroundStyle(saveMessageIsSuccess ? .green : .red)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(
+                        Color.white.opacity(0.08),
+                        in: RoundedRectangle(
+                            cornerRadius: 14,
+                            style: .continuous
+                        )
+                    )
                 }
 
                 Spacer(minLength: 0)
@@ -141,10 +188,15 @@ struct SettingsView: View {
         }
     }
 
-    private func glassCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    private func glassCard<Content: View>(@ViewBuilder content: () -> Content)
+        -> some View
+    {
         content()
             .padding(20)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(.white.opacity(0.12), lineWidth: 1)
